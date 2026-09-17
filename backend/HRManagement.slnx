@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="HR.Api/HR.Api.csproj" />
+  <Project Path="HR.Application/HR.Application.csproj" />
+  <Project Path="HR.Domain/HR.Domain.csproj" />
+  <Project Path="HR.Infrastructure/HR.Infrastructure.csproj" />
+</Solution>
