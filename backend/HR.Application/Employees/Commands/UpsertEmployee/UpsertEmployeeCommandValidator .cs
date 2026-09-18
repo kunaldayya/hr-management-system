@@ -1,10 +1,10 @@
 ﻿using FluentValidation;
 
-namespace HR.Application.Employees.Commands.CreateEmployee;
+namespace HR.Application.Employees.Commands.UpsertEmployee;
 
-public class CreateEmployeeCommandValidator : AbstractValidator<CreateEmployeeCommand>
+public class UpsertEmployeeCommandValidator : AbstractValidator<UpsertEmployeeCommand>
 {
-    public CreateEmployeeCommandValidator()
+    public UpsertEmployeeCommandValidator()
     {
         RuleFor(x => x.FirstName).NotEmpty().MaximumLength(50);
         RuleFor(x => x.LastName).NotEmpty().MaximumLength(50);
@@ -14,4 +14,3 @@ public class CreateEmployeeCommandValidator : AbstractValidator<CreateEmployeeCo
         RuleFor(x => x.DateOfJoining).NotEmpty();
     }
 }
-
