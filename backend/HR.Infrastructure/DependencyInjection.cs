@@ -1,6 +1,8 @@
 ﻿using HR.Application.Common.Interfaces;
+using HR.Domain.Interfaces;
 using HR.Infrastructure.Configurations;
 using HR.Infrastructure.Persistence;
+using HR.Infrastructure.Repositories;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -12,6 +14,8 @@ public static class DependencyInjection
     {
         services.Configure<MongoSettings>(configuration.GetSection(MongoSettings.SectionName));
         services.AddSingleton<IMongoContext, MongoContext>();
+
+        services.AddScoped<IEmployeeRepository, EmployeeRepository>();
 
         return services;
     }
