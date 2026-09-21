@@ -35,9 +35,9 @@ public class EmployeesController : BaseApiController
 
     [HttpGet]
     public async Task<ApiResponse<PaginatedResult<EmployeeDto>>> GetPaged(
+        CancellationToken cancellationToken,
         [FromQuery] int pageIndex = 1,
-        [FromQuery] int pageSize = 10,
-        CancellationToken cancellationToken = default)
+        [FromQuery] int pageSize = 10)
     {
         var query = new GetEmployeesQuery(pageIndex, pageSize);
         var result = await Mediator.Send(query, cancellationToken);

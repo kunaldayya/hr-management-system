@@ -3,6 +3,12 @@ using HR.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+
 const string AllowFrontendOrigin = "_allowFrontendOrigin";
 
 // 1. Register CORS service

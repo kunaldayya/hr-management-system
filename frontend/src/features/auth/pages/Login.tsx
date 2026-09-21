@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -154,9 +153,12 @@ const useStyles = makeStyles({
   },
 });
 
-export function LoginForm() {
+interface LoginFormProps {
+  onLoginSuccess: () => void;
+}
+
+export function LoginForm({ onLoginSuccess }: LoginFormProps) {
   const styles = useStyles();
-  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -168,15 +170,38 @@ export function LoginForm() {
     defaultValues: { email: '', password: '' },
   });
 
-  const loginMutation = usePostApiAuthLogin({
+const loginMutation = usePostApiAuthLogin({
     mutation: {
-      onSuccess: (response) => {
-        const authData = response.data.data;
-        if (authData?.accessToken) {
-          localStorage.setItem('accessToken', authData.accessToken);
-          if (authData.refreshToken) localStorage.setItem('refreshToken', authData.refreshToken);
-          navigate('/dashboard');
+      onSuccess: (response: any) => {
+        // Log this so you can inspect the exact structure in DevTools
+        console.log("Login API Response:", response);
+
+        // Handle both standard Axios (response.data) and wrapped envelopes (response.data.data)
+        const responseBody = response?.data ?? response;
+        const authData = responseBody?.data ?? responseBody;
+
+        // Fallback for token naming differences
+        const token = authData?.accessToken ?? authData?.token ?? responseBody?.token;
+        const refreshToken = authData?.refreshToken ?? responseBody?.refreshToken;
+
+        if (token) {
+          localStorage.setItem('accessToken', token);
+          if (refreshToken) {
+            localStorage.setItem('refreshToken', refreshToken);
+          }
+          
+          if (onLoginSuccess) {
+            onLoginSuccess();
+          }
+        } else {
+          console.error(
+            "Login returned 200 OK, but no access token was found in payload:",
+            response
+          );
         }
+      },
+      onError: (error) => {
+        console.error("Login failed:", error);
       },
     },
   });
@@ -186,7 +211,6 @@ export function LoginForm() {
   };
 
   return (
-    <FluentProvider theme={webLightTheme}>
       <div className={styles.pageContainer}>
         <div className={styles.glowTopLeft} />
         <div className={styles.glowBottomRight} />
@@ -294,6 +318,5 @@ export function LoginForm() {
           </CardFooter>
         </Card>
       </div>
-    </FluentProvider>
   );
 }

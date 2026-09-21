@@ -1,8 +1,10 @@
 ﻿using HR.Domain.Common;
 using HR.Domain.Enums;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace HR.Domain.Entities;
 
+[BsonIgnoreExtraElements]
 public class Employee : BaseEntity
 {
     public string FirstName { get; private set; } = string.Empty;
