@@ -9,25 +9,8 @@ import {
   Button,
   Input,
   Label,
-  makeStyles,
 } from '@fluentui/react-components';
 import { Department, type EmployeeDto, type UpsertEmployeeCommand } from '../../../api/generated/model';
-
-const useStyles = makeStyles({
-  field: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '4px',
-    marginBottom: '12px',
-  },
-  select: {
-    padding: '6px 8px',
-    borderRadius: '4px',
-    border: '1px solid #ccc',
-    fontSize: '14px',
-    height: '32px',
-  },
-});
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -38,13 +21,11 @@ interface EmployeeModalProps {
 }
 
 export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoading }: EmployeeModalProps) {
-  const styles = useStyles();
-
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [jobTitle, setJobTitle] = useState('');
-  const [department, setDepartment] = useState<Department>(Department.NUMBER_1);
+  const [department, setDepartment] = useState<Department>(Department.Engineering);
   const [salary, setSalary] = useState<number>(50000);
   const [dateOfJoining, setDateOfJoining] = useState<string>(new Date().toISOString().split('T')[0]);
 
@@ -54,8 +35,8 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
       setLastName(initialData.lastName ?? '');
       setEmail(initialData.email ?? '');
       setJobTitle(initialData.jobTitle ?? '');
-      setDepartment((initialData.department as Department) ?? Department.NUMBER_1);
-      setSalary((initialData as any).salary ?? 50000);
+      setDepartment((initialData.department as Department) ?? Department.Engineering);
+      setSalary(initialData.salary ?? 50000);
       setDateOfJoining(
         initialData.dateOfJoining
           ? new Date(initialData.dateOfJoining).toISOString().split('T')[0]
@@ -66,7 +47,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
       setLastName('');
       setEmail('');
       setJobTitle('');
-      setDepartment(Department.NUMBER_1);
+      setDepartment(Department.Engineering);
       setSalary(50000);
       setDateOfJoining(new Date().toISOString().split('T')[0]);
     }
@@ -88,67 +69,78 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
 
   return (
     <Dialog open={isOpen} onOpenChange={(_, data) => !data.open && onClose()}>
-      <DialogSurface>
+      <DialogSurface className="!rounded-md !p-6 max-w-lg w-full bg-white border border-slate-200">
         <form onSubmit={handleSubmit}>
           <DialogBody>
-            <DialogTitle>{initialData ? 'Edit Employee' : 'Add New Employee'}</DialogTitle>
-            <DialogContent>
-              <div className={styles.field}>
-                <Label required>First Name</Label>
-                <Input value={firstName} onChange={(_, d) => setFirstName(d.value)} required />
+            <DialogTitle className="text-slate-900 font-semibold text-lg border-b border-slate-200 pb-3 mb-4">
+              {initialData ? 'Edit Employee' : 'Add New Employee'}
+            </DialogTitle>
+            
+            <DialogContent className="grid grid-cols-2 gap-4 py-2">
+              <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">First Name</Label>
+                <Input value={firstName} onChange={(_, d) => setFirstName(d.value)} required className="!rounded-sm" />
               </div>
-              <div className={styles.field}>
-                <Label required>Last Name</Label>
-                <Input value={lastName} onChange={(_, d) => setLastName(d.value)} required />
+
+              <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Last Name</Label>
+                <Input value={lastName} onChange={(_, d) => setLastName(d.value)} required className="!rounded-sm" />
               </div>
-              <div className={styles.field}>
-                <Label required>Work Email</Label>
-                <Input type="email" value={email} onChange={(_, d) => setEmail(d.value)} required />
+
+              <div className="col-span-2 flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Work Email</Label>
+                <Input type="email" value={email} onChange={(_, d) => setEmail(d.value)} required className="!rounded-sm" />
               </div>
-              <div className={styles.field}>
-                <Label>Job Title</Label>
-                <Input value={jobTitle} onChange={(_, d) => setJobTitle(d.value)} />
+
+              <div className="flex flex-col gap-1.5">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-slate-600">Job Title</Label>
+                <Input value={jobTitle} onChange={(_, d) => setJobTitle(d.value)} className="!rounded-sm" />
               </div>
-              <div className={styles.field}>
-                <Label required>Department</Label>
+
+              <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Department</Label>
                 <select
-                  className={styles.select}
+                  className="h-8 px-3 rounded-sm border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600"
                   value={department}
-                  onChange={(e) => setDepartment(Number(e.target.value) as Department)}
+                  onChange={(e) => setDepartment(e.target.value as Department)}
                 >
-                  <option value={Department.NUMBER_1}>Engineering</option>
-                  <option value={Department.NUMBER_2}>Human Resources</option>
-                  <option value={Department.NUMBER_3}>Finance</option>
-                  <option value={Department.NUMBER_4}>Marketing</option>
-                  <option value={Department.NUMBER_5}>Sales</option>
-                  <option value={Department.NUMBER_6}>Operations</option>
+                  {Object.values(Department).map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
                 </select>
               </div>
-              <div className={styles.field}>
-                <Label required>Salary</Label>
+
+              <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Salary</Label>
                 <Input
                   type="number"
                   min="1"
                   value={salary.toString()}
                   onChange={(_, d) => setSalary(Number(d.value))}
                   required
+                  className="!rounded-sm"
                 />
               </div>
-              <div className={styles.field}>
-                <Label required>Date of Joining</Label>
+
+              <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Date of Joining</Label>
                 <Input
                   type="date"
                   value={dateOfJoining}
                   onChange={(_, d) => setDateOfJoining(d.value)}
                   required
+                  className="!rounded-sm"
                 />
               </div>
             </DialogContent>
-            <DialogActions>
-              <Button appearance="secondary" onClick={onClose} disabled={isLoading}>
+
+            <DialogActions className="pt-4 mt-4 border-t border-slate-200">
+              <Button appearance="secondary" onClick={onClose} disabled={isLoading} className="!rounded-sm">
                 Cancel
               </Button>
-              <Button appearance="primary" type="submit" disabled={isLoading}>
+              <Button appearance="primary" type="submit" disabled={isLoading} className="!rounded-sm !bg-blue-600 hover:!bg-blue-700">
                 {isLoading ? 'Saving…' : 'Save'}
               </Button>
             </DialogActions>

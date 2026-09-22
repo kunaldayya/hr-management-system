@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { makeStyles } from '@fluentui/react-components';
+import { Button } from '@fluentui/react-components';
+import { AddRegular } from '@fluentui/react-icons';
 
 import {
   usePostApiEmployeesUpsert,
@@ -10,39 +11,7 @@ import type { EmployeeDto, UpsertEmployeeCommand } from '../api/generated/model'
 import { EmployeeTable } from '../features/employees/components/EmployeeTable';
 import { EmployeeModal } from '../features/employees/components/EmployeeModal';
 
-const useStyles = makeStyles({
-  layout: {
-    padding: '24px',
-    width: '100%',
-    boxSizing: 'border-box',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    '@media (max-width: 768px)': {
-      padding: '12px',
-      gap: '12px',
-    },
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '12px',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: '600',
-    margin: 0,
-    color: '#1a1a1a',
-    '@media (max-width: 480px)': {
-      fontSize: '20px',
-    },
-  },
-});
-
 export function EmployeesPage() {
-  const styles = useStyles();
   const queryClient = useQueryClient();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -73,13 +42,31 @@ export function EmployeesPage() {
   };
 
   return (
-    <div className={styles.layout}>
-      <header className={styles.header}>
-        <h1 className={styles.title}>Employee Management</h1>
+    <div className="w-full flex flex-col gap-6 p-6 sm:p-4">
+      {/* Page Header */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-semibold text-slate-900 tracking-tight">
+            Employee Management
+          </h1>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            Manage employee details, roles, and departmental assignments.
+          </p>
+        </div>
+
+        <Button
+          appearance="primary"
+          icon={<AddRegular />}
+          onClick={handleCreateOpen}
+          className="!rounded-sm !bg-blue-600 hover:!bg-blue-700 !font-medium self-start sm:self-auto"
+        >
+          Add Employee
+        </Button>
       </header>
 
-      <main style={{ width: '100%', minWidth: 0 }}>
-        <EmployeeTable onAdd={handleCreateOpen} onEdit={handleEditOpen} />
+      {/* Main Content Area */}
+      <main className="w-full min-w-0">
+        <EmployeeTable onEdit={handleEditOpen} />
 
         <EmployeeModal
           isOpen={isModalOpen}

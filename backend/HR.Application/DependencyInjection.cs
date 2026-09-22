@@ -1,8 +1,8 @@
-﻿using System.Reflection;
-using FluentValidation;
+﻿using FluentValidation;
 using HR.Application.Common.Behaviors;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace HR.Application;
 
@@ -14,6 +14,7 @@ public static class DependencyInjection
 
         services.AddValidatorsFromAssembly(assembly);
 
+        // Call AddMediatR ONCE and include all behaviors and assemblies in a single configuration block
         services.AddMediatR(cfg =>
         {
             cfg.RegisterServicesFromAssembly(assembly);

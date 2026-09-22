@@ -1,71 +1,45 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { LoginForm } from "../features/auth/pages/Login";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
+import { LoginForm } from "../pages/Login/Login";
 import { DashboardLayout } from "../layouts/DashboardLayout";
 import { EmployeesPage } from "../pages/Employee";
+import ProtectedRoute from "./ProtectedRoute";
+import { GuestRoute } from "./GuestRoute";
+import { LeaveManagement } from "../pages/LeaveManagement";
+import { PayslipManagement } from "../pages/PayslipManagement";
 
-export const AppRoutes: React.FC = () => {
-  const navigate = useNavigate();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(
-    () => Boolean(localStorage.getItem("accessToken"))
-  );
-
-  // Sync auth status across tabs/windows
-  useEffect(() => {
-    const checkAuth = () => setIsAuthenticated(Boolean(localStorage.getItem("accessToken")));
-    window.addEventListener("storage", checkAuth);
-    return () => window.removeEventListener("storage", checkAuth);
-  }, []);
-
-  const handleLoginSuccess = useCallback(() => {
-    setIsAuthenticated(true);
-    navigate("/dashboard", { replace: true });
-  }, [navigate]);
-
-  const handleLogout = useCallback(() => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    setIsAuthenticated(false);
-    navigate("/login", { replace: true });
-  }, [navigate]);
+export function AppRoutes() {
+  const isAdmin = true;
 
   return (
     <Routes>
-      {/* Public Route */}
-      <Route
-        path="/login"
-        element={
-          isAuthenticated ? (
-            <Navigate to="/dashboard" replace />
-          ) : (
-            <LoginForm onLoginSuccess={handleLoginSuccess} />
-          )
-        }
-      />
+      {/* 1. Guest-only routes (Redirects to /dashboard if logged in) */}
+      <Route element={<GuestRoute />}>
+        <Route path="/login" element={<LoginForm />} />
+      </Route>
 
-      {/* Protected Dashboard Routes */}
-      <Route
-        path="/dashboard/*"
-        element={
-          isAuthenticated ? (
-            <DashboardLayout onLogout={handleLogout}>
-              <Routes>
-                <Route index element={<EmployeesPage />} />
-                <Route path="employees" element={<EmployeesPage />} />
-                <Route path="*" element={<Navigate to="/dashboard" replace />} />
-              </Routes>
+      {/* 2. Protected routes */}
+      <Route element={<ProtectedRoute />}>
+        <Route
+          path="/dashboard"
+          element={
+            <DashboardLayout>
+              <Outlet />
             </DashboardLayout>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
+          }
+        >
+          <Route index element={<EmployeesPage />} />
+          <Route path="employees" element={<EmployeesPage />} />
+          <Route path="leaves" element={<LeaveManagement isAdmin={isAdmin} />} />
+          <Route path="payslips" element={<PayslipManagement isAdmin={isAdmin} />} />
+          
+          {/* Catch-all for sub-routes */}
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Route>
+      </Route>
 
-      {/* Catch-all Fallback */}
-      <Route
-        path="*"
-        element={<Navigate to={isAuthenticated ? "/dashboard" : "/login"} replace />}
-      />
+      {/* 3. Default entry point */}
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );
-};
+}

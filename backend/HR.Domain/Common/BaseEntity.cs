@@ -12,5 +12,6 @@ namespace HR.Domain.Common
 
         [BsonElement("UpdatedAt")]
         public DateTime? UpdatedAt { get; set; }
+
     }
 }

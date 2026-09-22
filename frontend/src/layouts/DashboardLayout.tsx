@@ -1,134 +1,170 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Avatar,
-  Button,
-  Input,
-  Text,
   Menu,
   MenuTrigger,
   MenuPopover,
   MenuList,
   MenuItem,
+  Tooltip,
 } from '@fluentui/react-components';
 import {
   People24Regular,
   SignOutRegular,
-  SearchRegular,
   Alert24Regular,
-  Navigation24Regular,
-  Building24Regular,
+  Building24Filled,
   Briefcase24Regular,
   ChartMultiple24Regular,
   Person24Regular,
+  CalendarCheckmark24Regular,
+  DocumentEdit24Regular,
+  PanelLeftContract24Regular,
+  PanelLeftExpand24Regular,
 } from '@fluentui/react-icons';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { usePostApiAuthLogout } from '../api/generated/auth/auth';
 
-import styles from './DashboardLayout.module.css';
+const NAV_ITEMS = [
+  { key: 'employees', label: 'Employees', path: '/dashboard/employees', icon: People24Regular },
+  { key: 'departments', label: 'Departments', path: '/dashboard/departments', icon: Briefcase24Regular },
+  { key: 'leaves', label: 'Leaves', path: '/dashboard/leaves', icon: CalendarCheckmark24Regular },
+  { key: 'payslips', label: 'Payslips', path: '/dashboard/payslips', icon: DocumentEdit24Regular },
+  { key: 'analytics', label: 'Analytics', path: '/dashboard/analytics', icon: ChartMultiple24Regular },
+];
 
-interface DashboardLayoutProps {
-  children: React.ReactNode;
-  onLogout: () => void;
-}
-
-export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLogout }) => {
+export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
-  const [activeTab, setActiveTab] = useState<'employees' | 'departments' | 'analytics'>('employees');
+  const [userName, setUserName] = useState('Admin');
+
+  const activeTab = NAV_ITEMS.find((item) => pathname.includes(item.path))?.key || 'employees';
+
+  const logoutMutation = usePostApiAuthLogout({
+    mutation: {
+      onSettled: () => navigate('/login', { replace: true }),
+    },
+  });
+
+  useEffect(() => {
+    setUserName(localStorage.getItem('userName') || localStorage.getItem('user') || 'Admin User');
+  }, []);
 
   return (
-    <div className={styles.layoutRoot}>
+    <div className="min-h-screen w-full bg-slate-100 text-slate-800 flex overflow-hidden font-sans antialiased">
       {/* Sidebar */}
-      <aside className={`${styles.sidebar} ${collapsed ? styles.sidebarCollapsed : ''}`}>
-        <div>
-          <div className={styles.brandContainer}>
-            <div className={styles.brandLogo}>
-              <Building24Regular />
+      <aside
+        className={`relative z-20 flex flex-col justify-between bg-[#0B132B] text-slate-300 transition-[width] duration-200 ease-in-out overflow-hidden ${
+          collapsed ? 'w-20' : 'w-64'
+        }`}
+      >
+        <div className="flex flex-col p-4 gap-5">
+          {/* Brand Header */}
+          <div className={`flex items-center gap-3 py-1 ${collapsed ? 'justify-center' : ''}`}>
+            <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0">
+              <Building24Filled />
             </div>
             {!collapsed && (
-              <Text weight="bold" size={400} style={{ color: '#0f172a', whiteSpace: 'nowrap' }}>
-                HR Portal
-              </Text>
+              <div className="flex flex-col whitespace-nowrap overflow-hidden">
+                <span className="font-bold text-base text-white tracking-wide">Employee MS</span>
+                <span className="text-xs text-slate-400">Management System</span>
+              </div>
             )}
           </div>
 
-          <nav className={styles.navGroup}>
-            <div
-              className={`${styles.navItem} ${activeTab === 'employees' ? styles.navItemActive : ''} ${
-                collapsed ? styles.navItemCollapsed : ''
-              }`}
-              onClick={() => setActiveTab('employees')}
-              title={collapsed ? 'Employees' : undefined}
-            >
-              <div className={styles.navIcon}>
-                <People24Regular />
+          {/* User Badge */}
+          {!collapsed && (
+            <div className="p-3 rounded-xl bg-[#142042] flex items-center gap-3 border border-slate-800/80">
+              <Avatar name={userName} size={36} color="brand" />
+              <div className="flex flex-col overflow-hidden whitespace-nowrap">
+                <span className="text-sm font-semibold text-white truncate">{userName}</span>
+                <span className="text-xs text-slate-400 truncate">Employee</span>
               </div>
-              {!collapsed && <span>Employees</span>}
             </div>
+          )}
 
-            <div
-              className={`${styles.navItem} ${activeTab === 'departments' ? styles.navItemActive : ''} ${
-                collapsed ? styles.navItemCollapsed : ''
-              }`}
-              onClick={() => setActiveTab('departments')}
-              title={collapsed ? 'Departments' : undefined}
-            >
-              <div className={styles.navIcon}>
-                <Briefcase24Regular />
-              </div>
-              {!collapsed && <span>Departments</span>}
-            </div>
+          {!collapsed && (
+            <span className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase px-2 -mb-2">
+              Navigation
+            </span>
+          )}
 
-            <div
-              className={`${styles.navItem} ${activeTab === 'analytics' ? styles.navItemActive : ''} ${
-                collapsed ? styles.navItemCollapsed : ''
-              }`}
-              onClick={() => setActiveTab('analytics')}
-              title={collapsed ? 'Analytics' : undefined}
-            >
-              <div className={styles.navIcon}>
-                <ChartMultiple24Regular />
-              </div>
-              {!collapsed && <span>Analytics</span>}
-            </div>
+          {/* Nav List */}
+          <nav className="flex flex-col gap-1">
+            {NAV_ITEMS.map(({ key, label, path, icon: Icon }) => {
+              const isActive = activeTab === key;
+              const navBtn = (
+                <button
+                  key={key}
+                  onClick={() => navigate(path)}
+                  className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-medium text-sm transition-colors group ${
+                    isActive
+                      ? 'bg-blue-600/20 text-blue-400 font-semibold border-l-4 border-blue-500 rounded-l-none'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  } ${collapsed ? 'justify-center px-0' : ''}`}
+                >
+                  <Icon className={`shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                  {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
+                </button>
+              );
+
+              return collapsed ? (
+                <Tooltip key={key} content={label} relationship="label" positioning="after">
+                  {navBtn}
+                </Tooltip>
+              ) : (
+                navBtn
+              );
+            })}
           </nav>
         </div>
 
-        {/* Bottom Toggle Button */}
-        <Button
-          appearance="subtle"
-          icon={<Navigation24Regular />}
-          onClick={() => setCollapsed((prev) => !prev)}
-          className={`${styles.toggleButton} ${collapsed ? styles.toggleButtonCollapsed : ''}`}
-          style={{ justifyContent: collapsed ? 'center' : 'flex-start' }}
-          aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {!collapsed && 'Collapse'}
-        </Button>
+        {/* Footer Toggle Button */}
+        <div className="p-4 border-t border-slate-800/80">
+          <button
+            onClick={() => setCollapsed((prev) => !prev)}
+            className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors ${
+              collapsed ? 'justify-center px-0' : 'justify-start'
+            }`}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? <PanelLeftExpand24Regular className="shrink-0" /> : <PanelLeftContract24Regular className="shrink-0" />}
+            {!collapsed && <span className="font-medium text-sm whitespace-nowrap">Collapse</span>}
+          </button>
+        </div>
       </aside>
 
-      {/* Main Content Area */}
-      <div className={styles.mainContentWrapper}>
-        <header className={styles.header}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Input
-              className={styles.searchBar}
-              contentBefore={<SearchRegular />}
-              placeholder="Search portal…"
-            />
-          </div>
+      {/* Main Container */}
+      <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+        {/* Header Bar */}
+        <header className="h-16 px-8 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm">
+          <h1 className="text-slate-800 font-semibold text-lg">
+            Welcome back, <span className="text-blue-600">{userName}</span>
+          </h1>
 
-          <div className={styles.headerActions}>
-            <Button appearance="subtle" icon={<Alert24Regular />} aria-label="Notifications" />
+          <div className="flex items-center gap-4">
+            <button className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors" aria-label="Notifications">
+              <Alert24Regular />
+            </button>
 
             <Menu>
               <MenuTrigger disableButtonEnhancement>
-                <Button appearance="transparent" style={{ padding: 0 }}>
-                  <Avatar name="Admin User" color="brand" badge={{ status: 'available' }} />
-                </Button>
+                <button className="rounded-full p-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500/30">
+                  <Avatar name={userName} size={32} color="brand" />
+                </button>
               </MenuTrigger>
-              <MenuPopover>
+              <MenuPopover className="!bg-white !border !border-slate-200 !rounded-xl !p-1.5 !shadow-lg">
                 <MenuList>
-                  <MenuItem icon={<Person24Regular />}>Profile Settings</MenuItem>
-                  <MenuItem icon={<SignOutRegular />} onClick={onLogout}>
-                    Log out
+                  <MenuItem icon={<Person24Regular className="text-slate-600" />} className="!rounded-lg hover:!bg-slate-100 !text-slate-700">
+                    Profile Settings
+                  </MenuItem>
+                  <MenuItem
+                    icon={<SignOutRegular className="text-red-500" />}
+                    onClick={() => logoutMutation.mutate()}
+                    disabled={logoutMutation.isPending}
+                    className="!rounded-lg hover:!bg-red-50 !text-red-600"
+                  >
+                    {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
                   </MenuItem>
                 </MenuList>
               </MenuPopover>
@@ -136,7 +172,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children, onLo
           </div>
         </header>
 
-        <main className={styles.contentBody}>{children}</main>
+        {/* Content Body */}
+        <main className="flex-1 p-8 overflow-y-auto bg-slate-50">
+          {children}
+        </main>
       </div>
     </div>
   );

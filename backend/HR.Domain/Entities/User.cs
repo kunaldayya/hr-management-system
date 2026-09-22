@@ -1,7 +1,9 @@
 ﻿using HR.Domain.Common;
+using MongoDB.Bson.Serialization.Attributes;
 
 namespace HR.Domain.Entities;
 
+[BsonIgnoreExtraElements]
 public class User : BaseEntity
 {
     public string TenantId { get; private set; } = string.Empty;
@@ -39,5 +41,11 @@ public class User : BaseEntity
     public void Deactivate()
     {
         IsActive = false;
+    }
+
+    public void RevokeRefreshToken()
+    {
+        RefreshToken = null;
+        RefreshTokenExpiryTime = null;
     }
 }

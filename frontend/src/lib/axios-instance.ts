@@ -2,6 +2,7 @@ import axios, { type AxiosRequestConfig } from 'axios';
 
 export const AXIOS_INSTANCE = axios.create({
   baseURL: 'https://localhost:7169',
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

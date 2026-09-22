@@ -10,7 +10,6 @@ import {
   Button,
   Spinner,
   Badge,
-  makeStyles,
   Dialog,
   DialogSurface,
   DialogBody,
@@ -19,7 +18,7 @@ import {
   DialogActions,
 } from '@fluentui/react-components';
 import type { BadgeProps } from '@fluentui/react-components';
-import { AddRegular, EditRegular, DeleteRegular } from '@fluentui/react-icons';
+import { EditRegular, DeleteRegular } from '@fluentui/react-icons';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -72,61 +71,11 @@ const getStatusConfig = (status: any): StatusConfig => {
   return STATUS_MAP[status] ?? { label: String(status), color: 'informative' };
 };
 
-const useStyles = makeStyles({
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-    padding: '20px',
-    backgroundColor: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
-    width: '100%',
-    boxSizing: 'border-box',
-    '@media (max-width: 768px)': {
-      padding: '12px',
-      borderRadius: '8px',
-    },
-  },
-  tableWrapper: {
-    width: '100%',
-    overflowX: 'auto', // Enables clean side-swiping on small screens
-    WebkitOverflowScrolling: 'touch',
-  },
-  table: {
-    width: '100%',
-    minWidth: '650px', // Ensures data columns maintain readable widths
-  },
-  toolbar: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    marginBottom: '4px',
-  },
-  paginationContainer: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '12px',
-    paddingTop: '12px',
-    '@media (max-width: 480px)': {
-      justifyContent: 'center',
-      flexDirection: 'column',
-    },
-  },
-  actionsCell: {
-    textAlign: 'right',
-    whiteSpace: 'nowrap',
-  },
-});
-
 interface EmployeeTableProps {
-  onAdd: () => void;
   onEdit: (employee: EmployeeDto) => void;
 }
 
-export function EmployeeTable({ onAdd, onEdit }: EmployeeTableProps) {
-  const styles = useStyles();
+export function EmployeeTable({ onEdit }: EmployeeTableProps) {
   const queryClient = useQueryClient();
 
   const [pageIndex, setPageIndex] = useState<number>(1);
@@ -153,33 +102,29 @@ export function EmployeeTable({ onAdd, onEdit }: EmployeeTableProps) {
   });
 
   return (
-    <div className={styles.container}>
-      <div className={styles.toolbar}>
-        <Button appearance="primary" icon={<AddRegular />} onClick={onAdd}>
-          Add Employee
-        </Button>
-      </div>
-
+    <div className="w-full bg-white border border-slate-200 rounded-md p-5 shadow-sm flex flex-col gap-4">
       {isLoading ? (
-        <Spinner label="Loading employees…" style={{ padding: '40px' }} />
+        <div className="py-12 flex justify-center items-center">
+          <Spinner label="Loading employees…" />
+        </div>
       ) : (
-        <div className={styles.tableWrapper}>
-          <Table className={styles.table} aria-label="Employee Table">
-            <TableHeader>
+        <div className="w-full overflow-x-auto">
+          <Table className="w-full min-w-[650px]" aria-label="Employee Table">
+            <TableHeader className="border-b border-slate-200 bg-slate-50">
               <TableRow>
-                <TableHeaderCell>Name</TableHeaderCell>
-                <TableHeaderCell>Email</TableHeaderCell>
-                <TableHeaderCell>Job Title</TableHeaderCell>
-                <TableHeaderCell>Department</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                <TableHeaderCell>Date of Joining</TableHeaderCell>
-                <TableHeaderCell className={styles.actionsCell}>Actions</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Name</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Email</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Job Title</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Department</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Status</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Date of Joining</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3 text-right">Actions</TableHeaderCell>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="divide-y divide-slate-100">
               {employees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} style={{ textAlign: 'center', padding: '24px' }}>
+                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
                     No employees found.
                   </TableCell>
                 </TableRow>
@@ -188,29 +133,35 @@ export function EmployeeTable({ onAdd, onEdit }: EmployeeTableProps) {
                   const statusInfo = getStatusConfig(emp.status);
 
                   return (
-                    <TableRow key={emp.id}>
+                    <TableRow key={emp.id} className="hover:bg-slate-50/80 transition-colors">
                       <TableCell>
-                        <TableCellLayout style={{ whiteSpace: 'nowrap' }}>
+                        <TableCellLayout className="whitespace-nowrap font-medium text-slate-800">
                           {`${emp.firstName ?? ''} ${emp.lastName ?? ''}`}
                         </TableCellLayout>
                       </TableCell>
-                      <TableCell>{emp.email ?? '-'}</TableCell>
-                      <TableCell>{emp.jobTitle ?? '-'}</TableCell>
-                      <TableCell>{getDepartmentLabel(emp.department)}</TableCell>
+                      <TableCell className="text-slate-600">{emp.email ?? '-'}</TableCell>
+                      <TableCell className="text-slate-600">{emp.jobTitle ?? '-'}</TableCell>
+                      <TableCell className="text-slate-600">{getDepartmentLabel(emp.department)}</TableCell>
                       <TableCell>
-                        <Badge color={statusInfo.color} appearance="tint">
+                        <Badge color={statusInfo.color} appearance="tint" className="!rounded-sm font-medium">
                           {statusInfo.label}
                         </Badge>
                       </TableCell>
-                      <TableCell style={{ whiteSpace: 'nowrap' }}>
+                      <TableCell className="whitespace-nowrap text-slate-600">
                         {emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString() : '-'}
                       </TableCell>
-                      <TableCell className={styles.actionsCell}>
-                        <Button appearance="subtle" icon={<EditRegular />} onClick={() => onEdit(emp)} />
+                      <TableCell className="text-right whitespace-nowrap">
                         <Button
                           appearance="subtle"
-                          icon={<DeleteRegular />}
+                          icon={<EditRegular className="text-slate-600" />}
+                          onClick={() => onEdit(emp)}
+                          className="!rounded-sm hover:!bg-slate-200/60"
+                        />
+                        <Button
+                          appearance="subtle"
+                          icon={<DeleteRegular className="text-red-600" />}
                           onClick={() => emp.id && setDeleteId(emp.id)}
+                          className="!rounded-sm hover:!bg-red-50"
                         />
                       </TableCell>
                     </TableRow>
@@ -222,33 +173,50 @@ export function EmployeeTable({ onAdd, onEdit }: EmployeeTableProps) {
         </div>
       )}
 
-      <div className={styles.paginationContainer}>
+      {/* Pagination Container */}
+      <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-600 font-medium">
         <span>
-          Page {pageIndex} of {totalPages} ({totalCount} total)
+          Page <strong className="text-slate-800">{pageIndex}</strong> of <strong className="text-slate-800">{totalPages}</strong> ({totalCount} total)
         </span>
-        <div style={{ display: 'flex', gap: '8px' }}>
-          <Button disabled={pageIndex <= 1} onClick={() => setPageIndex((p) => p - 1)}>
+        <div className="flex gap-2">
+          <Button
+            size="small"
+            disabled={pageIndex <= 1}
+            onClick={() => setPageIndex((p) => p - 1)}
+            className="!rounded-sm"
+          >
             Previous
           </Button>
-          <Button disabled={pageIndex >= totalPages} onClick={() => setPageIndex((p) => p + 1)}>
+          <Button
+            size="small"
+            disabled={pageIndex >= totalPages}
+            onClick={() => setPageIndex((p) => p + 1)}
+            className="!rounded-sm"
+          >
             Next
           </Button>
         </div>
       </div>
 
+      {/* Confirm Delete Dialog */}
       <Dialog open={!!deleteId} onOpenChange={(_, data) => !data.open && setDeleteId(null)}>
-        <DialogSurface>
+        <DialogSurface className="!rounded-md !p-6 max-w-sm w-full bg-white border border-slate-200">
           <DialogBody>
-            <DialogTitle>Confirm Delete</DialogTitle>
-            <DialogContent>Are you sure you want to delete this employee?</DialogContent>
-            <DialogActions>
-              <Button appearance="secondary" onClick={() => setDeleteId(null)}>
+            <DialogTitle className="text-slate-900 font-semibold text-lg border-b border-slate-200 pb-3 mb-3">
+              Confirm Delete
+            </DialogTitle>
+            <DialogContent className="text-sm text-slate-600 py-2">
+              Are you sure you want to delete this employee? This action cannot be undone.
+            </DialogContent>
+            <DialogActions className="pt-4 mt-2 border-t border-slate-200">
+              <Button appearance="secondary" onClick={() => setDeleteId(null)} className="!rounded-sm">
                 Cancel
               </Button>
               <Button
                 appearance="primary"
                 onClick={() => deleteId && deleteMutation.mutate({ id: deleteId })}
                 disabled={deleteMutation.isPending}
+                className="!rounded-sm !bg-red-600 hover:!bg-red-700"
               >
                 {deleteMutation.isPending ? 'Deleting…' : 'Delete'}
               </Button>
