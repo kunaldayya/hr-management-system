@@ -4,12 +4,10 @@
  * HR Management API
  * OpenAPI spec version: v1
  */
-import type { UserRole } from './userRole';
 
-export interface AuthUserDto {
+export interface RejectLeaveDto {
   /** @nullable */
-  email?: string | null;
-  role?: UserRole;
+  leaveId?: string | null;
   /** @nullable */
-  accessToken?: string | null;
+  reason?: string | null;
 }

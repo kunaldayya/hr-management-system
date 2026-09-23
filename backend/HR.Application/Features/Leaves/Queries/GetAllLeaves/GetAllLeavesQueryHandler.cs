@@ -1,5 +1,6 @@
-﻿using HR.Application.Common.Interfaces;
+using HR.Application.Common.Interfaces;
 using HR.Domain.Entities;
+using HR.Domain.Interfaces;
 using MediatR;
 using MongoDB.Driver;
 using HR.Application.Features.Leaves.Queries.Dtos;
@@ -9,16 +10,17 @@ namespace HR.Application.Features.Leaves.Queries.GetAllLeaves;
 public class GetAllLeavesQueryHandler : IRequestHandler<GetAllLeavesQuery, List<LeaveRequestDto>>
 {
     private readonly IMongoContext _mongoContext;
+    private readonly IUserRepository _userRepository;
 
-    public GetAllLeavesQueryHandler(IMongoContext mongoContext)
+    public GetAllLeavesQueryHandler(IMongoContext mongoContext, IUserRepository userRepository)
     {
         _mongoContext = mongoContext;
+        _userRepository = userRepository;
     }
 
     public async Task<List<LeaveRequestDto>> Handle(GetAllLeavesQuery request, CancellationToken cancellationToken)
     {
         var leavesCollection = _mongoContext.GetCollection<LeaveRequest>("LeaveRequests");
-        var employeesCollection = _mongoContext.GetCollection<Employee>("Employees");
 
         // Fetch all leave requests sorted by StartDate descending
         var leaves = await leavesCollection
@@ -26,31 +28,29 @@ public class GetAllLeavesQueryHandler : IRequestHandler<GetAllLeavesQuery, List<
             .SortByDescending(l => l.StartDate)
             .ToListAsync(cancellationToken);
 
-        // Normalize IDs to strings for reliable dictionary mapping
+        // Collect unique employee IDs from the leave requests
         var employeeIds = leaves
             .Select(l => l.EmployeeId?.ToString())
             .Where(id => !string.IsNullOrEmpty(id))
             .Distinct()
             .ToList();
 
-        // Fetch employees matching the IDs (handling string comparison safely)
-        var employees = await employeesCollection
-            .Find(e => employeeIds.Contains(e.Id.ToString()))
-            .ToListAsync(cancellationToken);
-
-        // Create a lookup dictionary using string keys
-        var employeeMap = employees.ToDictionary(e => e.Id.ToString(), e => e);
+        // Fetch all user records for those IDs from the unified users collection
+        var users = await _userRepository.GetAllAsync(cancellationToken);
+        var userMap = users
+            .Where(u => employeeIds.Contains(u.Id))
+            .ToDictionary(u => u.Id, u => u);
 
         return leaves.Select(l =>
         {
-            string empIdStr = l.EmployeeId?.ToString() ?? string.Empty;
-            employeeMap.TryGetValue(empIdStr, out var employee);
+            var empIdStr = l.EmployeeId?.ToString() ?? string.Empty;
+            userMap.TryGetValue(empIdStr, out var user);
 
             return new LeaveRequestDto
             {
                 Id = l.Id.ToString(),
                 EmployeeId = empIdStr,
-                EmployeeName = employee != null ? $"{employee.FirstName} {employee.LastName}".Trim() : "Unknown Employee",
+                EmployeeName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : "Unknown User",
                 LeaveType = l.LeaveType.ToString(),
                 StartDate = l.StartDate,
                 EndDate = l.EndDate,

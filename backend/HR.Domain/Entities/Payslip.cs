@@ -1,13 +1,10 @@
-﻿using HR.Domain.Common;
+using HR.Domain.Common;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 
 namespace HR.Domain.Entities;
 public class Payslip : BaseEntity
 {
-    [BsonId]
-    [BsonRepresentation(BsonType.ObjectId)]
-    public string Id { get; set; } = ObjectId.GenerateNewId().ToString();
 
     public string EmployeeId { get; set; } = string.Empty;
     public int Month { get; set; }

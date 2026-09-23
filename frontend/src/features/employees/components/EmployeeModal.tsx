@@ -10,7 +10,7 @@ import {
   Input,
   Label,
 } from '@fluentui/react-components';
-import { Department, type EmployeeDto, type UpsertEmployeeCommand } from '../../../api/generated/model';
+import { Department, UserRole, type EmployeeDto, type UpsertEmployeeCommand } from '../../../api/generated/model';
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -24,6 +24,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState<UserRole>(UserRole.Employee);
   const [jobTitle, setJobTitle] = useState('');
   const [department, setDepartment] = useState<Department>(Department.Engineering);
   const [salary, setSalary] = useState<number>(50000);
@@ -34,6 +35,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
       setFirstName(initialData.firstName ?? '');
       setLastName(initialData.lastName ?? '');
       setEmail(initialData.email ?? '');
+      setRole((initialData.role as UserRole) ?? UserRole.Employee);
       setJobTitle(initialData.jobTitle ?? '');
       setDepartment((initialData.department as Department) ?? Department.Engineering);
       setSalary(initialData.salary ?? 50000);
@@ -46,6 +48,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
       setFirstName('');
       setLastName('');
       setEmail('');
+      setRole(UserRole.Employee);
       setJobTitle('');
       setDepartment(Department.Engineering);
       setSalary(50000);
@@ -60,6 +63,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
       firstName,
       lastName,
       email,
+      role,
       jobTitle,
       department,
       salary: Number(salary),
@@ -113,6 +117,21 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
               </div>
 
               <div className="flex flex-col gap-1.5">
+                <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Role</Label>
+                <select
+                  className="h-8 px-3 rounded-sm border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as UserRole)}
+                >
+                  {Object.values(UserRole).map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Salary</Label>
                 <Input
                   type="number"
@@ -124,7 +143,7 @@ export function EmployeeModal({ isOpen, onClose, onSubmit, initialData, isLoadin
                 />
               </div>
 
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col gap-1.5 col-span-2">
                 <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">Date of Joining</Label>
                 <Input
                   type="date"

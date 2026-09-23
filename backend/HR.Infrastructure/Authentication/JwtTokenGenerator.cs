@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
@@ -27,16 +27,12 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var claims = new List<Claim>
         {
             new(JwtRegisteredClaimNames.Sub, user.Id),
+            new(ClaimTypes.NameIdentifier, user.Id),
             new(JwtRegisteredClaimNames.Email, user.Email),
-            new("tenantId", user.TenantId)
+            new(ClaimTypes.Email, user.Email),
+            new("tenantId", user.TenantId),
+            new(ClaimTypes.Role, user.Role.ToString())
         };
-
-        if (!string.IsNullOrEmpty(user.EmployeeId))
-        {
-            claims.Add(new Claim("employeeId", user.EmployeeId));
-        }
-
-        claims.AddRange(user.Roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {

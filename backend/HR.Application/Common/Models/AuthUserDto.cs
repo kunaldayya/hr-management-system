@@ -1,6 +1,9 @@
-﻿namespace HR.Application.Common.Models;
+using HR.Domain.Enums;
+
+namespace HR.Application.Common.Models;
 
 public record AuthUserDto(
     string Email,
-    List<string> Roles
+    UserRole Role,
+    string? AccessToken = null
 );

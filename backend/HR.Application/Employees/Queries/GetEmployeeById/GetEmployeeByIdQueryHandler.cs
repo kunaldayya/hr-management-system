@@ -1,4 +1,4 @@
-﻿using HR.Application.Employees.Common;
+using HR.Application.Employees.Common;
 using HR.Domain.Interfaces;
 using MediatR;
 
@@ -6,30 +6,31 @@ namespace HR.Application.Employees.Queries.GetEmployeeById;
 
 public class GetEmployeeByIdQueryHandler : IRequestHandler<GetEmployeeByIdQuery, EmployeeDto?>
 {
-    private readonly IEmployeeRepository _employeeRepository;
+    private readonly IUserRepository _userRepository;
 
-    public GetEmployeeByIdQueryHandler(IEmployeeRepository employeeRepository)
+    public GetEmployeeByIdQueryHandler(IUserRepository userRepository)
     {
-        _employeeRepository = employeeRepository;
+        _userRepository = userRepository;
     }
 
     public async Task<EmployeeDto?> Handle(GetEmployeeByIdQuery request, CancellationToken cancellationToken)
     {
-        var employee = await _employeeRepository.GetByIdAsync(request.Id, cancellationToken);
-        if (employee == null) return null;
+        var user = await _userRepository.GetByIdAsync(request.Id, cancellationToken);
+        if (user == null) return null;
 
         return new EmployeeDto
         {
-            Id = employee.Id,
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Email = employee.Email,
-            Department = employee.Department,
-            JobTitle = employee.JobTitle,
-            Salary = employee.Salary,
-            Status = employee.Status,
-            DateOfJoining = employee.DateOfJoining,
-            CreatedAt = employee.CreatedAt
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role,
+            Department = user.Department,
+            JobTitle = user.JobTitle,
+            Salary = user.Salary,
+            Status = user.Status,
+            DateOfJoining = user.DateOfJoining,
+            CreatedAt = user.CreatedAt
         };
     }
 }

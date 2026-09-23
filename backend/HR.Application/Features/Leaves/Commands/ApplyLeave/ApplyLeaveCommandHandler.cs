@@ -2,8 +2,6 @@
 using HR.Domain.Entities;
 using MediatR;
 using Microsoft.AspNetCore.Http;
-using MongoDB.Bson;
-using MongoDB.Driver;
 using System.Security.Claims;
 
 namespace HR.Application.Features.Leaves.Commands.ApplyLeave;
@@ -23,7 +21,6 @@ public class ApplyLeaveCommandHandler : IRequestHandler<ApplyLeaveCommand, strin
     {
         var user = _httpContextAccessor.HttpContext?.User;
 
-        // Fixed: Use standard FindFirst().Value fallback if FindFirstValue extension is missing
         var userId = user?.FindFirst(ClaimTypes.NameIdentifier)?.Value
                   ?? user?.FindFirst("sub")?.Value
                   ?? throw new UnauthorizedAccessException("User is not authenticated.");

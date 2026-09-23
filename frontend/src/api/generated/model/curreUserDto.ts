@@ -6,10 +6,10 @@
  */
 import type { UserRole } from './userRole';
 
-export interface AuthUserDto {
+export interface CurreUserDto {
   /** @nullable */
   email?: string | null;
   role?: UserRole;
   /** @nullable */
-  accessToken?: string | null;
+  fullName?: string | null;
 }

@@ -1,10 +1,16 @@
-﻿namespace HR.Application.Common.Models;
+﻿using System.Text.Json.Serialization;
+
+namespace HR.Application.Common.Models;
 
 public class ApiResponse<T>
 {
     public bool Status { get; set; }
     public string Message { get; set; } = string.Empty;
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public T? Data { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public List<string>? Errors { get; set; }
 
     public static ApiResponse<T> Success(T data, string message = "Request processed successfully") =>

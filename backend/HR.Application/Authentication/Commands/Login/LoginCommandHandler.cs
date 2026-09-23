@@ -1,4 +1,4 @@
-﻿using HR.Application.Common.Interfaces;
+using HR.Application.Common.Interfaces;
 using HR.Application.Common.Models;
 using HR.Domain.Interfaces;
 using HR.Application.Common.Configurations;
@@ -53,7 +53,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, AuthResponseDto
             refreshToken,
             refreshTokenExpiry,
             user.Email,
-            user.Roles
+            user.Role
         );
     }
 }

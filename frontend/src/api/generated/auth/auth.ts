@@ -26,6 +26,7 @@ import type {
 import type {
   AuthUserDtoApiResponse,
   BooleanApiResponse,
+  CurreUserDtoApiResponse,
   LoginCommand,
   RegisterUserCommand
 } from '../model';
@@ -259,17 +260,17 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       return useMutation(getPostApiAuthLoginMutationOptions(options), queryClient);
     }
     export type getApiAuthMeResponse200TextPlain = {
-  data: AuthUserDtoApiResponse
+  data: CurreUserDtoApiResponse
   status: 200
 }
 
 export type getApiAuthMeResponse200ApplicationJson = {
-  data: AuthUserDtoApiResponse
+  data: CurreUserDtoApiResponse
   status: 200
 }
 
 export type getApiAuthMeResponse200TextJson = {
-  data: AuthUserDtoApiResponse
+  data: CurreUserDtoApiResponse
   status: 200
 }
 

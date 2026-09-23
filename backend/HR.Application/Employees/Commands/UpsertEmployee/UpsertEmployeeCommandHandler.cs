@@ -1,4 +1,5 @@
-﻿using HR.Application.Employees.Common;
+using HR.Application.Common.Interfaces;
+using HR.Application.Employees.Common;
 using HR.Domain.Entities;
 using HR.Domain.Interfaces;
 using MediatR;
@@ -7,70 +8,83 @@ namespace HR.Application.Employees.Commands.UpsertEmployee;
 
 public class UpsertEmployeeCommandHandler : IRequestHandler<UpsertEmployeeCommand, EmployeeDto>
 {
-    private readonly IEmployeeRepository _employeeRepository;
+    private readonly IUserRepository _userRepository;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public UpsertEmployeeCommandHandler(IEmployeeRepository employeeRepository)
+    public UpsertEmployeeCommandHandler(IUserRepository userRepository, IPasswordHasher passwordHasher)
     {
-        _employeeRepository = employeeRepository;
+        _userRepository = userRepository;
+        _passwordHasher = passwordHasher;
     }
 
     public async Task<EmployeeDto> Handle(UpsertEmployeeCommand request, CancellationToken cancellationToken)
     {
-        Employee? employee = null;
+        User? user = null;
 
         // 1. If Id is provided, attempt to retrieve for update
         if (!string.IsNullOrWhiteSpace(request.Id))
         {
-            employee = await _employeeRepository.GetByIdAsync(request.Id, cancellationToken);
+            user = await _userRepository.GetByIdAsync(request.Id, cancellationToken);
         }
 
-        // 2. If no Id, check by email to prevent duplicate registration
-        if (employee == null)
+        // 2. If no Id, check by email to prevent duplicate creation
+        if (user == null)
         {
-            employee = await _employeeRepository.GetByEmailAsync(request.Email, cancellationToken);
+            user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         }
 
-        if (employee != null)
+        if (user != null)
         {
-            // Update Existing Record
-            employee.UpdateProfile(
+            // Update existing user's profile
+            user.UpdateProfile(
                 request.FirstName,
                 request.LastName,
                 request.JobTitle,
                 request.Department,
                 request.Salary
             );
+            user.UpdateRole(request.Role);
+            if (request.DateOfJoining.HasValue)
+            {
+                user.UpdateDateOfJoining(request.DateOfJoining.Value);
+            }
 
-            await _employeeRepository.UpdateAsync(employee, cancellationToken);
+            await _userRepository.UpdateAsync(user, cancellationToken);
         }
         else
         {
-            // Insert New Record
-            employee = new Employee(
-                request.FirstName,
-                request.LastName,
-                request.Email,
-                request.Department,
-                request.JobTitle,
-                request.Salary,
-                request.DateOfJoining
+            var defaultPassword = "Employee@123";
+            var passwordHash = _passwordHasher.HashPassword(defaultPassword);
+
+            user = new User(
+                tenantId: "default",
+                email: request.Email,
+                passwordHash: passwordHash,
+                role: request.Role,
+                firstName: request.FirstName,
+                lastName: request.LastName,
+                department: request.Department,
+                jobTitle: request.JobTitle,
+                salary: request.Salary,
+                dateOfJoining: request.DateOfJoining
             );
 
-            await _employeeRepository.AddAsync(employee, cancellationToken);
+            await _userRepository.AddAsync(user, cancellationToken);
         }
 
         return new EmployeeDto
         {
-            Id = employee.Id,
-            FirstName = employee.FirstName,
-            LastName = employee.LastName,
-            Email = employee.Email,
-            Department = employee.Department,
-            JobTitle = employee.JobTitle,
-            Salary = employee.Salary,
-            Status = employee.Status,
-            DateOfJoining = employee.DateOfJoining,
-            CreatedAt = employee.CreatedAt
+            Id = user.Id,
+            FirstName = user.FirstName,
+            LastName = user.LastName,
+            Email = user.Email,
+            Role = user.Role,
+            Department = user.Department,
+            JobTitle = user.JobTitle,
+            Salary = user.Salary,
+            Status = user.Status,
+            DateOfJoining = user.DateOfJoining,
+            CreatedAt = user.CreatedAt
         };
     }
 }

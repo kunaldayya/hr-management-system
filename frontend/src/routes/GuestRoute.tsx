@@ -3,25 +3,29 @@ import { Spinner } from "@fluentui/react-components";
 import { useGetApiAuthMe } from "../api/generated/auth/auth";
 
 export function GuestRoute() {
-  const { data: user, isLoading, isError } = useGetApiAuthMe({
+  const { data, isLoading, isError } = useGetApiAuthMe({
     query: {
       retry: false,
+      staleTime: 0,
     },
   });
 
   if (isLoading) {
     return (
-      <div className="min-h-screen w-screen flex justify-center items-center bg-[#070A13]">
+      <div className="min-h-screen w-screen flex justify-center items-center bg-slate-100">
         <Spinner size="large" label="Loading..." />
       </div>
     );
   }
 
-  // If already authenticated, bypass login and redirect to dashboard
-  if (user && !isError) {
+  // Extract user from wrapped or unwrapped response
+  const user = (data as any)?.data ?? data;
+
+  // If authenticated and not in error state, redirect to dashboard
+  if (!isError && user?.email) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // If not logged in, allow access to public routes
+  // Not logged in — allow access to guest routes (login page)
   return <Outlet />;
 }

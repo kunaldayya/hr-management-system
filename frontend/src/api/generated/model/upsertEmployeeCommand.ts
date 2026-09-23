@@ -5,6 +5,7 @@
  * OpenAPI spec version: v1
  */
 import type { Department } from './department';
+import type { UserRole } from './userRole';
 
 export interface UpsertEmployeeCommand {
   /** @nullable */
@@ -15,9 +16,11 @@ export interface UpsertEmployeeCommand {
   lastName?: string | null;
   /** @nullable */
   email?: string | null;
+  role?: UserRole;
   department?: Department;
   /** @nullable */
   jobTitle?: string | null;
   salary?: number;
-  dateOfJoining?: string;
+  /** @nullable */
+  dateOfJoining?: string | null;
 }

@@ -45,49 +45,119 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
 
-  // Reset form when modal closes or opens
+  // Reset form on modal close
   useEffect(() => {
     if (!isModalOpen) {
-      setLeaveType('Annual');
+      setLeaveType('Annual' as LeaveType);
       setStartDate('');
       setEndDate('');
       setReason('');
     }
   }, [isModalOpen]);
 
-  // 1. Conditional query fetching based on user role
+  // 1. Role-based query hooks
   const adminQuery = useGetApiLeaves({ query: { enabled: isAdmin } });
   const employeeQuery = useGetApiLeavesMyLeaves({ query: { enabled: !isAdmin } });
 
   const activeQuery = isAdmin ? adminQuery : employeeQuery;
+  const activeQueryKey = isAdmin ? getGetApiLeavesQueryKey() : getGetApiLeavesMyLeavesQueryKey();
+
   const leavesData = (activeQuery.data as any)?.data ?? activeQuery.data;
   const leaves = Array.isArray(leavesData) ? leavesData : leavesData?.data ?? [];
 
-  // 2. Cache Invalidation Helper
-  const refreshData = () => {
-    queryClient.invalidateQueries({ queryKey: getGetApiLeavesQueryKey() });
-    queryClient.invalidateQueries({ queryKey: getGetApiLeavesMyLeavesQueryKey() });
+  // Helper function to update status inside different API response structures
+  const updateStatusInCache = (oldData: any, targetId: string, newStatus: string) => {
+    if (!oldData) return oldData;
+
+    const updateItem = (item: any) =>
+      item.id === targetId ? { ...item, status: newStatus } : item;
+
+    // Direct Array
+    if (Array.isArray(oldData)) {
+      return oldData.map(updateItem);
+    }
+    // ApiResponse wrapper: { data: [...] }
+    if (Array.isArray(oldData.data)) {
+      return { ...oldData, data: oldData.data.map(updateItem) };
+    }
+    // Axios wrapper: { data: { data: [...] } }
+    if (Array.isArray(oldData.data?.data)) {
+      return {
+        ...oldData,
+        data: { ...oldData.data, data: oldData.data.data.map(updateItem) },
+      };
+    }
+
+    return oldData;
   };
 
-  // 3. Mutations
+  // 2. Mutations with OPTIMISTIC UPDATES for instant UI changes
   const applyLeaveMutation = usePostApiLeaves({
     mutation: {
       onSuccess: () => {
         setIsModalOpen(false);
-        refreshData();
+        queryClient.invalidateQueries({ queryKey: activeQueryKey });
       },
     },
   });
 
   const approveMutation = usePutApiLeavesIdApprove({
-    mutation: { onSuccess: refreshData },
+    mutation: {
+      // Runs IMMEDIATELY when approve button is clicked
+      onMutate: async (variables) => {
+        // Cancel ongoing refetches so they don't overwrite our optimistic update
+        await queryClient.cancelQueries({ queryKey: activeQueryKey });
+
+        // Snapshot previous state for rollback on error
+        const previousLeaves = queryClient.getQueryData(activeQueryKey);
+
+        // Optimistically update status to 'Approved' in the cache right away
+        queryClient.setQueryData(activeQueryKey, (oldData: any) =>
+          updateStatusInCache(oldData, variables.id, 'Approved')
+        );
+
+        return { previousLeaves };
+      },
+      // Rollback to previous state if backend returns an error
+      onError: (_err, _variables, context) => {
+        if (context?.previousLeaves) {
+          queryClient.setQueryData(activeQueryKey, context.previousLeaves);
+        }
+      },
+      // Always sync with backend after mutation settles
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: activeQueryKey });
+      },
+    },
   });
 
   const rejectMutation = usePutApiLeavesIdReject({
-    mutation: { onSuccess: refreshData },
+    mutation: {
+      // Runs IMMEDIATELY when reject button is clicked
+      onMutate: async (variables) => {
+        await queryClient.cancelQueries({ queryKey: activeQueryKey });
+
+        const previousLeaves = queryClient.getQueryData(activeQueryKey);
+
+        // Optimistically update status to 'Rejected' in the cache right away
+        queryClient.setQueryData(activeQueryKey, (oldData: any) =>
+          updateStatusInCache(oldData, variables.id, 'Rejected')
+        );
+
+        return { previousLeaves };
+      },
+      onError: (_err, _variables, context) => {
+        if (context?.previousLeaves) {
+          queryClient.setQueryData(activeQueryKey, context.previousLeaves);
+        }
+      },
+      onSettled: () => {
+        queryClient.invalidateQueries({ queryKey: activeQueryKey });
+      },
+    },
   });
 
-  // Handlers
+  // Action Handlers
   const handleApplyLeave = (e: React.FormEvent) => {
     e.preventDefault();
     if (!startDate || !endDate || !reason) return;
@@ -103,11 +173,21 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
   };
 
   const handleApprove = (id: string) => {
-    approveMutation.mutate({ id, data: { leaveId: id, adminRemarks: 'Approved' } });
+    approveMutation.mutate({
+      id, // Path parameter for {id}
+      data: {
+        adminRemarks: 'Approved', // Body parameter matching ApproveLeaveDto
+      },
+    });
   };
 
   const handleReject = (id: string) => {
-    rejectMutation.mutate({ id, data: { leaveId: id, reason: 'Rejected' } });
+    rejectMutation.mutate({
+      id, // Path parameter for {id}
+      data: {
+        reason: 'Rejected', // Body parameter matching RejectLeaveDto
+      },
+    });
   };
 
   return (
@@ -125,7 +205,6 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
           </p>
         </div>
 
-        {/* Universal Apply for Leave Button */}
         <Button
           appearance="primary"
           onClick={() => setIsModalOpen(true)}
@@ -135,7 +214,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
         </Button>
       </header>
 
-      {/* Leave Requests Table Card */}
+      {/* Leave Requests Table */}
       <main className="w-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
         <div className="w-full overflow-x-auto">
           <Table className="w-full text-left text-sm text-slate-600">
@@ -205,7 +284,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                                 disabled={approveMutation.isPending}
                                 className="!bg-emerald-600 hover:!bg-emerald-700 text-white !rounded-sm"
                               >
-                                Approve
+                                {approveMutation.isPending ? 'Approving...' : 'Approve'}
                               </Button>
                               <Button
                                 size="small"
@@ -214,7 +293,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                                 disabled={rejectMutation.isPending}
                                 className="border-red-200 text-red-600 hover:bg-red-50 !rounded-sm"
                               >
-                                Reject
+                                {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
                               </Button>
                             </div>
                           ) : (
@@ -231,7 +310,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
         </div>
       </main>
 
-      {/* Fluent UI Dialog Modal matching EmployeeModal structure */}
+      {/* Leave Application Dialog Modal */}
       <Dialog open={isModalOpen} onOpenChange={(_, data) => !data.open && setIsModalOpen(false)}>
         <DialogSurface className="!rounded-md !p-6 max-w-lg w-full bg-white border border-slate-200 shadow-xl">
           <form onSubmit={handleApplyLeave}>

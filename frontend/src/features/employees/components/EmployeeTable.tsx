@@ -114,6 +114,7 @@ export function EmployeeTable({ onEdit }: EmployeeTableProps) {
               <TableRow>
                 <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Name</TableHeaderCell>
                 <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Email</TableHeaderCell>
+                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Role</TableHeaderCell>
                 <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Job Title</TableHeaderCell>
                 <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Department</TableHeaderCell>
                 <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Status</TableHeaderCell>
@@ -124,7 +125,7 @@ export function EmployeeTable({ onEdit }: EmployeeTableProps) {
             <TableBody className="divide-y divide-slate-100">
               {employees.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-slate-500">
+                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
                     No employees found.
                   </TableCell>
                 </TableRow>
@@ -140,6 +141,15 @@ export function EmployeeTable({ onEdit }: EmployeeTableProps) {
                         </TableCellLayout>
                       </TableCell>
                       <TableCell className="text-slate-600">{emp.email ?? '-'}</TableCell>
+                      <TableCell>
+                        <Badge
+                          color={emp.role === 'Admin' ? 'danger' : emp.role === 'HR' ? 'brand' : 'informative'}
+                          appearance="tint"
+                          className="!rounded-sm font-medium"
+                        >
+                          {emp.role ?? 'Employee'}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="text-slate-600">{emp.jobTitle ?? '-'}</TableCell>
                       <TableCell className="text-slate-600">{getDepartmentLabel(emp.department)}</TableCell>
                       <TableCell>

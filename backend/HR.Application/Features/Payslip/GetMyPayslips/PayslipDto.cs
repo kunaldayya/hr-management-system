@@ -1,9 +1,10 @@
-﻿namespace HR.Application.Features.Payslips.Queries.GetMyPayslips;
+namespace HR.Application.Features.Payslips.Queries.GetMyPayslips;
 
 public class PayslipDto
 {
     public string Id { get; set; } = string.Empty;
     public string EmployeeId { get; set; } = string.Empty;
+    public string EmployeeName { get; set; } = string.Empty;
     public int Month { get; set; }
     public int Year { get; set; }
     public decimal BasicSalary { get; set; }

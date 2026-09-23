@@ -25,10 +25,10 @@ import type {
 
 import type {
   ApplyLeaveCommand,
-  ApproveLeaveCommand,
+  ApproveLeaveDto,
   BooleanApiResponse,
   LeaveRequestDtoListApiResponse,
-  RejectLeaveCommand,
+  RejectLeaveDto,
   StringApiResponse
 } from '../model';
 
@@ -420,7 +420,7 @@ export const getPutApiLeavesIdApproveUrl = (id: string,) => {
 }
 
 export const putApiLeavesIdApprove = async (id: string,
-    approveLeaveCommand?: ApproveLeaveCommand, options?: Parameters<typeof axiosInstance>[1]): Promise<putApiLeavesIdApproveResponse> => {
+    approveLeaveDto?: ApproveLeaveDto, options?: Parameters<typeof axiosInstance>[1]): Promise<putApiLeavesIdApproveResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -441,7 +441,7 @@ return axiosInstance<putApiLeavesIdApproveResponse>(getPutApiLeavesIdApproveUrl(
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(approveLeaveCommand)
+    body: JSON.stringify(approveLeaveDto)
   }
 );}
 
@@ -479,9 +479,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PutApiLeavesIdApproveMutationResult = NonNullable<Awaited<ReturnType<typeof putApiLeavesIdApprove>>>
-    export type PutApiLeavesIdApproveMutationBody = ApproveLeaveCommand | undefined
+    export type PutApiLeavesIdApproveMutationBody = ApproveLeaveDto | undefined
     export type PutApiLeavesIdApproveMutationError = unknown
-    export type PutApiLeavesIdApproveMutationVariables = {id: string;data?: ApproveLeaveCommand}
+    export type PutApiLeavesIdApproveMutationVariables = {id: string;data?: ApproveLeaveDto}
 
     export const usePutApiLeavesIdApprove = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putApiLeavesIdApprove>>, TError,PutApiLeavesIdApproveMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}
@@ -524,7 +524,7 @@ export const getPutApiLeavesIdRejectUrl = (id: string,) => {
 }
 
 export const putApiLeavesIdReject = async (id: string,
-    rejectLeaveCommand?: RejectLeaveCommand, options?: Parameters<typeof axiosInstance>[1]): Promise<putApiLeavesIdRejectResponse> => {
+    rejectLeaveDto?: RejectLeaveDto, options?: Parameters<typeof axiosInstance>[1]): Promise<putApiLeavesIdRejectResponse> => {
 
     const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
     if (!h) return {};
@@ -545,7 +545,7 @@ return axiosInstance<putApiLeavesIdRejectResponse>(getPutApiLeavesIdRejectUrl(id
     ...options,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
-    body: JSON.stringify(rejectLeaveCommand)
+    body: JSON.stringify(rejectLeaveDto)
   }
 );}
 
@@ -583,9 +583,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type PutApiLeavesIdRejectMutationResult = NonNullable<Awaited<ReturnType<typeof putApiLeavesIdReject>>>
-    export type PutApiLeavesIdRejectMutationBody = RejectLeaveCommand | undefined
+    export type PutApiLeavesIdRejectMutationBody = RejectLeaveDto | undefined
     export type PutApiLeavesIdRejectMutationError = unknown
-    export type PutApiLeavesIdRejectMutationVariables = {id: string;data?: RejectLeaveCommand}
+    export type PutApiLeavesIdRejectMutationVariables = {id: string;data?: RejectLeaveDto}
 
     export const usePutApiLeavesIdReject = <TError = unknown,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putApiLeavesIdReject>>, TError,PutApiLeavesIdRejectMutationVariables, TContext>, request?: SecondParameter<typeof axiosInstance>}

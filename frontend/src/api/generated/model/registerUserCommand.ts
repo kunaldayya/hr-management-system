@@ -4,6 +4,8 @@
  * HR Management API
  * OpenAPI spec version: v1
  */
+import type { Department } from './department';
+import type { UserRole } from './userRole';
 
 export interface RegisterUserCommand {
   /** @nullable */
@@ -12,8 +14,15 @@ export interface RegisterUserCommand {
   email?: string | null;
   /** @nullable */
   password?: string | null;
+  role?: UserRole;
   /** @nullable */
-  roles?: string[] | null;
+  firstName?: string | null;
   /** @nullable */
-  employeeId?: string | null;
+  lastName?: string | null;
+  department?: Department;
+  /** @nullable */
+  jobTitle?: string | null;
+  salary?: number;
+  /** @nullable */
+  dateOfJoining?: string | null;
 }

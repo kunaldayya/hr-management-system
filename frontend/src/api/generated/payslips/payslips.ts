@@ -154,7 +154,123 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPostApiPayslipsGenerateMutationOptions(options), queryClient);
     }
-    export type getApiPayslipsMyPayslipsResponse200TextPlain = {
+    export type getApiPayslipsResponse200TextPlain = {
+  data: PayslipDtoListApiResponse
+  status: 200
+}
+
+export type getApiPayslipsResponse200ApplicationJson = {
+  data: PayslipDtoListApiResponse
+  status: 200
+}
+
+export type getApiPayslipsResponse200TextJson = {
+  data: PayslipDtoListApiResponse
+  status: 200
+}
+
+export type getApiPayslipsResponseSuccess = (getApiPayslipsResponse200TextPlain | getApiPayslipsResponse200ApplicationJson | getApiPayslipsResponse200TextJson) & {
+  headers: Headers;
+};
+;
+
+export type getApiPayslipsResponse = (getApiPayslipsResponseSuccess)
+
+export const getGetApiPayslipsUrl = () => {
+
+
+
+
+  return `/api/Payslips`
+}
+
+export const getApiPayslips = async ( options?: Parameters<typeof axiosInstance>[1]): Promise<getApiPayslipsResponse> => {
+
+  return axiosInstance<getApiPayslipsResponse>(getGetApiPayslipsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetApiPayslipsQueryKey = () => {
+    return [
+    `/api/Payslips`
+    ] as const;
+    }
+
+
+export const getGetApiPayslipsQueryOptions = <TData = Awaited<ReturnType<typeof getApiPayslips>>, TError = unknown>( options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetApiPayslipsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getApiPayslips>>> = ({ signal }) => getApiPayslips({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetApiPayslipsQueryResult = NonNullable<Awaited<ReturnType<typeof getApiPayslips>>>
+export type GetApiPayslipsQueryError = unknown
+
+
+export function useGetApiPayslips<TData = Awaited<ReturnType<typeof getApiPayslips>>, TError = unknown>(
+  options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApiPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof getApiPayslips>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApiPayslips<TData = Awaited<ReturnType<typeof getApiPayslips>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getApiPayslips>>,
+          TError,
+          Awaited<ReturnType<typeof getApiPayslips>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetApiPayslips<TData = Awaited<ReturnType<typeof getApiPayslips>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetApiPayslips<TData = Awaited<ReturnType<typeof getApiPayslips>>, TError = unknown>(
+  options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getApiPayslips>>, TError, TData>>, request?: SecondParameter<typeof axiosInstance>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetApiPayslipsQueryOptions(options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+export type getApiPayslipsMyPayslipsResponse200TextPlain = {
   data: PayslipDtoListApiResponse
   status: 200
 }

@@ -1,16 +1,19 @@
-﻿using HR.Application.Common.Models;
+using HR.Application.Common.Models;
 using HR.Application.Employees.Commands.DeleteEmployee;
 using HR.Application.Employees.Commands.UpsertEmployee;
 using HR.Application.Employees.Common;
 using HR.Application.Employees.Queries.GetEmployeeById;
 using HR.Application.Employees.Queries.GetEmployees;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HR.Api.Controllers;
 
+[Authorize]
 public class EmployeesController : BaseApiController
 {
     [HttpPost("upsert")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ApiResponse<EmployeeDto>> Upsert(
         [FromBody] UpsertEmployeeCommand command,
         CancellationToken cancellationToken)
@@ -34,6 +37,7 @@ public class EmployeesController : BaseApiController
     }
 
     [HttpGet]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ApiResponse<PaginatedResult<EmployeeDto>>> GetPaged(
         CancellationToken cancellationToken,
         [FromQuery] int pageIndex = 1,
@@ -45,6 +49,7 @@ public class EmployeesController : BaseApiController
     }
 
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Admin,HR")]
     public async Task<ApiResponse<bool>> Delete(
         string id,
         CancellationToken cancellationToken)

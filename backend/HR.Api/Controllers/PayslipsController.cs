@@ -1,6 +1,7 @@
-﻿using HR.Application.Common.Models;
+using HR.Application.Common.Models;
 using HR.Application.Features.Payslip.GeneratePayslip;
 using HR.Application.Features.Payslips.Commands.GeneratePayslip;
+using HR.Application.Features.Payslips.Queries.GetAllPayslips;
 using HR.Application.Features.Payslips.Queries.GetMyPayslips;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -22,11 +23,19 @@ namespace HR.Api.Controllers
         }
 
         [HttpPost("generate")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,HR")]
         public async Task<ActionResult<ApiResponse<string>>> GeneratePayslip([FromBody] GeneratePayslipCommand command)
         {
             var payslipId = await _mediator.Send(command);
             return Ok(ApiResponse<string>.Success(payslipId, "Payslip generated successfully."));
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,HR")]
+        public async Task<ActionResult<ApiResponse<List<PayslipDto>>>> GetAllPayslips()
+        {
+            var result = await _mediator.Send(new GetAllPayslipsQuery());
+            return Ok(ApiResponse<List<PayslipDto>>.Success(result));
         }
 
         [HttpGet("my-payslips")]

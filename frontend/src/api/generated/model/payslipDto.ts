@@ -10,6 +10,8 @@ export interface PayslipDto {
   id?: string | null;
   /** @nullable */
   employeeId?: string | null;
+  /** @nullable */
+  employeeName?: string | null;
   month?: number;
   year?: number;
   basicSalary?: number;

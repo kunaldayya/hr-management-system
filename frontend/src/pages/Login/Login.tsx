@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from 'zod/v4';
 import {
   Card,
   CardHeader,
@@ -28,10 +28,16 @@ import { usePostApiAuthLogin, getGetApiAuthMeQueryKey } from '../../api/generate
 
 const loginSchema = z.object({
   email: z.string().min(1, 'Enter your email').email('Enter a valid email address'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 type LoginValues = z.infer<typeof loginSchema>;
+
+const DEMO_CREDENTIALS = [
+  { label: 'Admin', email: 'admin@hrms.com', password: 'Password123!' },
+  { label: 'HR',    email: 'hr@hrms.com',    password: 'Password123!' },
+  { label: 'Employee', email: 'employee@hrms.com', password: 'Password123!' },
+] as const;
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -41,6 +47,7 @@ export function LoginForm() {
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -49,8 +56,14 @@ export function LoginForm() {
 
   const loginMutation = usePostApiAuthLogin({
     mutation: {
-      onSuccess: async () => {
-        await queryClient.invalidateQueries({ queryKey: getGetApiAuthMeQueryKey() });
+      onSuccess: async (response) => {
+        // Save access token so axios-instance can attach Authorization: Bearer header
+        const token = (response as any)?.data?.accessToken ?? (response as any)?.accessToken;
+        if (token) {
+          localStorage.setItem('accessToken', token);
+        }
+        queryClient.clear();
+        await queryClient.refetchQueries({ queryKey: getGetApiAuthMeQueryKey() });
         navigate('/dashboard', { replace: true });
       },
       onError: (error) => {
@@ -63,20 +76,23 @@ export function LoginForm() {
     loginMutation.mutate({ data: values });
   };
 
+  const fillDemo = (email: string, password: string) => {
+    setValue('email', email, { shouldValidate: true });
+    setValue('password', password, { shouldValidate: true });
+  };
+
   return (
     <div className="min-h-screen w-screen flex items-center justify-center bg-slate-100 p-4 font-sans antialiased">
-      {/* Sharp Clean Card matching Dashboard Theme */}
-      <Card className="w-full max-w-[400px] !bg-white !border !border-slate-200 !rounded-md !shadow-sm !p-8 flex flex-col gap-6">
+      <Card className="w-full max-w-[420px] !bg-white !border !border-slate-200 !rounded-md !shadow-sm !p-8 flex flex-col gap-5">
         <CardHeader
           header={
             <div className="flex flex-col items-center gap-3 w-full text-center">
-              {/* Brand Icon Matching Sidebar */}
               <div className="p-2.5 rounded-md bg-[#0B132B] text-white">
                 <Building24Filled />
               </div>
               <div className="flex flex-col gap-1">
                 <Text weight="bold" className="text-xl text-slate-900 tracking-tight">
-                  Employee MS
+                  HR Management System
                 </Text>
                 <Text size={200} className="text-slate-500 font-medium">
                   Sign in to your account
@@ -86,10 +102,33 @@ export function LoginForm() {
           }
         />
 
+        {/* Demo credential quick-fill buttons */}
+        <div className="flex flex-col gap-1.5">
+          <Text size={100} className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-center">
+            Quick Sign-In (Demo)
+          </Text>
+          <div className="flex gap-2">
+            {DEMO_CREDENTIALS.map(({ label, email, password }) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => fillDemo(email, password)}
+                className="flex-1 text-xs py-1.5 px-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors font-medium"
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="w-full h-px bg-slate-200" />
+
         {loginMutation.isError && (
           <MessageBar intent="error" shape="square" className="!rounded-sm">
             <MessageBarBody>
-              {(loginMutation.error as Error)?.message ?? 'Invalid email or password'}
+              {(loginMutation.error as any)?.response?.data?.message
+                ?? (loginMutation.error as Error)?.message
+                ?? 'Invalid email or password'}
             </MessageBarBody>
           </MessageBar>
         )}
@@ -160,8 +199,6 @@ export function LoginForm() {
             {loginMutation.isPending ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
-
-        <div className="w-full h-px bg-slate-200" />
 
         <CardFooter className="justify-center !p-0">
           <Text size={200} className="text-slate-500">

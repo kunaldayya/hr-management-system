@@ -6,6 +6,7 @@
  */
 import type { Department } from './department';
 import type { EmployeeStatus } from './employeeStatus';
+import type { UserRole } from './userRole';
 
 export interface EmployeeDto {
   /** @nullable */
@@ -16,11 +17,13 @@ export interface EmployeeDto {
   lastName?: string | null;
   /** @nullable */
   email?: string | null;
+  role?: UserRole;
   department?: Department;
   /** @nullable */
   jobTitle?: string | null;
   salary?: number;
   status?: EmployeeStatus;
-  dateOfJoining?: string;
+  /** @nullable */
+  dateOfJoining?: string | null;
   createdAt?: string;
 }

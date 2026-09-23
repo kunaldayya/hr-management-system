@@ -1,4 +1,4 @@
-﻿using HR.Application.Common.Configurations;
+using HR.Application.Common.Configurations;
 using HR.Application.Common.Interfaces;
 using HR.Domain.Interfaces;
 using HR.Infrastructure.Authentication;
@@ -19,7 +19,6 @@ public static class DependencyInjection
         services.AddSingleton<IMongoContext, MongoContext>();
 
         // Repositories
-        services.AddScoped<IEmployeeRepository, EmployeeRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
 
         // JWT Settings & Authentication Services

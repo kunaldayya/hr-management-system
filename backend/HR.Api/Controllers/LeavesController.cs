@@ -1,4 +1,4 @@
-﻿using HR.Application.Common.Models;
+using HR.Application.Common.Models;
 using HR.Application.Features.Leaves.Commands.ApplyLeave;
 using HR.Application.Features.Leaves.Commands.ApproveLeave;
 using HR.Application.Features.Leaves.Commands.RejectLeave;
@@ -40,6 +40,7 @@ namespace HR.Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,HR")]
         public async Task<ApiResponse<List<LeaveRequestDto>>> GetAllLeaves()
         {
             var result = await _mediator.Send(new GetAllLeavesQuery());
@@ -47,19 +48,44 @@ namespace HR.Api.Controllers
         }
 
         [HttpPut("{id}/approve")]
-        public async Task<ApiResponse<bool>> ApproveLeave(string id, [FromBody] ApproveLeaveCommand command)
+        [Authorize(Roles = "Admin,HR")]
+        public async Task<ApiResponse<bool>> ApproveLeave(string id, [FromBody] ApproveLeaveDto? request)
         {
-            command.LeaveId = id;
-            var result = await _mediator.Send(command);
+            var command = new ApproveLeaveCommand
+            {
+                LeaveId = id,
+                AdminRemarks = request?.AdminRemarks ?? "Approved"
+            };
+
+            var result = await _mediator.Send(command, CancellationToken.None);
             return ApiResponse<bool>.Success(result, "Leave request approved.");
         }
 
         [HttpPut("{id}/reject")]
-        public async Task<ApiResponse<bool>> RejectLeave(string id, [FromBody] RejectLeaveCommand command)
+        [Authorize(Roles = "Admin,HR")]
+        public async Task<ApiResponse<bool>> RejectLeave(string id, [FromBody] RejectLeaveDto? request)
         {
-            command.LeaveId = id;
-            var result = await _mediator.Send(command);
+            var command = new RejectLeaveCommand
+            {
+                LeaveId = id,
+                Reason = request?.Reason ?? "Rejected"
+            };
+
+            var result = await _mediator.Send(command, CancellationToken.None);
             return ApiResponse<bool>.Success(result, "Leave request rejected.");
         }
+    }
+
+    // Explicit DTOs with default property values
+    public class ApproveLeaveDto
+    {
+        public string? LeaveId { get; set; }
+        public string? AdminRemarks { get; set; } = "Approved";
+    }
+
+    public class RejectLeaveDto
+    {
+        public string? LeaveId { get; set; }
+        public string? Reason { get; set; } = "Rejected";
     }
 }

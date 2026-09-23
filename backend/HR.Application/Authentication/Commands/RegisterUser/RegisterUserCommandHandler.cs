@@ -1,4 +1,4 @@
-﻿using HR.Application.Common.Interfaces;
+using HR.Application.Common.Interfaces;
 using HR.Application.Common.Models;
 using HR.Domain.Entities;
 using HR.Domain.Interfaces;
@@ -36,12 +36,18 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
         }
 
         var passwordHash = _passwordHasher.HashPassword(request.Password);
+
         var user = new User(
             tenantId: request.TenantId,
             email: request.Email,
             passwordHash: passwordHash,
-            roles: request.Roles,
-            employeeId: request.EmployeeId
+            role: request.Role,
+            firstName: request.FirstName,
+            lastName: request.LastName,
+            department: request.Department,
+            jobTitle: request.JobTitle,
+            salary: request.Salary,
+            dateOfJoining: request.DateOfJoining
         );
 
         var accessToken = _jwtTokenGenerator.GenerateAccessToken(user);
@@ -56,7 +62,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
             refreshToken,
             refreshTokenExpiry,
             user.Email,
-            user.Roles
+            user.Role
         );
     }
 }

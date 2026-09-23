@@ -1,4 +1,4 @@
-﻿using HR.Domain.Interfaces;
+using HR.Domain.Interfaces;
 using MediatR;
 
 namespace HR.Application.Features.Auth.Commands.Logout

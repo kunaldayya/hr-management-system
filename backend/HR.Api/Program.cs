@@ -1,3 +1,4 @@
+using HR.Api.Middleware;
 using HR.Application;
 using HR.Infrastructure;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -79,6 +80,9 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddHttpContextAccessor();
 
@@ -121,6 +125,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseExceptionHandler();
+
 app.UseHttpsRedirection();
 
 app.UseCors(AllowFrontendOrigin);
@@ -130,5 +136,8 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed database (clean up legacy ObjectId docs + create default users for all roles)
+await HR.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
 
 app.Run();

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Avatar,
   Menu,
@@ -13,8 +13,6 @@ import {
   SignOutRegular,
   Alert24Regular,
   Building24Filled,
-  Briefcase24Regular,
-  ChartMultiple24Regular,
   Person24Regular,
   CalendarCheckmark24Regular,
   DocumentEdit24Regular,
@@ -22,33 +20,58 @@ import {
   PanelLeftExpand24Regular,
 } from '@fluentui/react-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { usePostApiAuthLogout } from '../api/generated/auth/auth';
+import { useQueryClient } from '@tanstack/react-query';
+
+// Import the generated Orval auth hooks
+import { useGetApiAuthMe, usePostApiAuthLogout } from '../api/generated/auth/auth';
 
 const NAV_ITEMS = [
   { key: 'employees', label: 'Employees', path: '/dashboard/employees', icon: People24Regular },
-  { key: 'departments', label: 'Departments', path: '/dashboard/departments', icon: Briefcase24Regular },
   { key: 'leaves', label: 'Leaves', path: '/dashboard/leaves', icon: CalendarCheckmark24Regular },
   { key: 'payslips', label: 'Payslips', path: '/dashboard/payslips', icon: DocumentEdit24Regular },
-  { key: 'analytics', label: 'Analytics', path: '/dashboard/analytics', icon: ChartMultiple24Regular },
 ];
 
 export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
-  const [userName, setUserName] = useState('Admin');
 
-  const activeTab = NAV_ITEMS.find((item) => pathname.includes(item.path))?.key || 'employees';
+  // 1. Fetch current authenticated user details from API
+  const { data: meResponse, isLoading: isUserLoading } = useGetApiAuthMe();
 
-  const logoutMutation = usePostApiAuthLogout({
-    mutation: {
-      onSettled: () => navigate('/login', { replace: true }),
-    },
+  // Extract user payload (handling wrapper if present)
+  const user = (meResponse as any)?.data ?? meResponse;
+
+  // Extract Name and Role dynamically with fallbacks
+  const userName = user?.fullName || user?.name || user?.email || 'User';
+  const rawRole: string = user?.role ?? (Array.isArray(user?.roles) ? user.roles[0] : 'Employee');
+  const userRole = rawRole;
+  const normalizedRole = String(rawRole).toLowerCase();
+  const isAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === '1' || normalizedRole === '2';
+
+  const visibleNavItems = NAV_ITEMS.filter((item) => {
+    if (item.key === 'employees') {
+      return isAdmin;
+    }
+    return true;
   });
 
-  useEffect(() => {
-    setUserName(localStorage.getItem('userName') || localStorage.getItem('user') || 'Admin User');
-  }, []);
+  const activeTab = visibleNavItems.find((item) => pathname.includes(item.path))?.key || (isAdmin ? 'employees' : 'leaves');
+
+  const handleLogout = () => {
+    // Always clean up client-side state immediately
+    localStorage.removeItem('accessToken');
+    queryClient.clear();
+    // Fire logout to backend (revoke refresh token), then navigate regardless
+    logoutMutation.mutate(undefined, {
+      onSettled: () => {
+        navigate('/login', { replace: true });
+      },
+    });
+  };
+
+  const logoutMutation = usePostApiAuthLogout();
 
   return (
     <div className="min-h-screen w-full bg-slate-100 text-slate-800 flex overflow-hidden font-sans antialiased">
@@ -66,19 +89,23 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             </div>
             {!collapsed && (
               <div className="flex flex-col whitespace-nowrap overflow-hidden">
-                <span className="font-bold text-base text-white tracking-wide">Employee MS</span>
+                <span className="font-bold text-base text-white tracking-wide">HR MS</span>
                 <span className="text-xs text-slate-400">Management System</span>
               </div>
             )}
           </div>
 
-          {/* User Badge */}
+          {/* User Badge - Updated with Dynamic Name & Role */}
           {!collapsed && (
             <div className="p-3 rounded-xl bg-[#142042] flex items-center gap-3 border border-slate-800/80">
               <Avatar name={userName} size={36} color="brand" />
               <div className="flex flex-col overflow-hidden whitespace-nowrap">
-                <span className="text-sm font-semibold text-white truncate">{userName}</span>
-                <span className="text-xs text-slate-400 truncate">Employee</span>
+                <span className="text-sm font-semibold text-white truncate">
+                  {isUserLoading ? 'Loading...' : userName}
+                </span>
+                <span className="text-xs text-slate-400 truncate">
+                  {isUserLoading ? '...' : userRole}
+                </span>
               </div>
             </div>
           )}
@@ -91,7 +118,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
 
           {/* Nav List */}
           <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ key, label, path, icon: Icon }) => {
+            {visibleNavItems.map(({ key, label, path, icon: Icon }) => {
               const isActive = activeTab === key;
               const navBtn = (
                 <button
@@ -139,7 +166,10 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         {/* Header Bar */}
         <header className="h-16 px-8 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm">
           <h1 className="text-slate-800 font-semibold text-lg">
-            Welcome back, <span className="text-blue-600">{userName}</span>
+            Welcome,{' '}
+            <span className="text-blue-600">
+              {isUserLoading ? 'Loading...' : userName}
+            </span>
           </h1>
 
           <div className="flex items-center gap-4">
@@ -160,7 +190,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                   </MenuItem>
                   <MenuItem
                     icon={<SignOutRegular className="text-red-500" />}
-                    onClick={() => logoutMutation.mutate()}
+                    onClick={handleLogout}
                     disabled={logoutMutation.isPending}
                     className="!rounded-lg hover:!bg-red-50 !text-red-600"
                   >
