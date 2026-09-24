@@ -1,4 +1,3 @@
-import React from 'react';
 import { Button } from '@fluentui/react-components';
 import { ArrowLeft20Regular, Print20Regular } from '@fluentui/react-icons';
 
