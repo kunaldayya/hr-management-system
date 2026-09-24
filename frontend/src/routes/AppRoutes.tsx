@@ -1,80 +1,72 @@
-import { Routes, Route, Navigate, Outlet } from "react-router-dom";
-import { LoginForm } from "../pages/Login/Login";
-import { DashboardLayout } from "../layouts/DashboardLayout";
-import { EmployeesPage } from "../pages/Employee";
-import ProtectedRoute from "./ProtectedRoute";
-import { GuestRoute } from "./GuestRoute";
-import { LeaveManagement } from "../pages/LeaveManagement";
-import { PayslipManagement } from "../pages/PayslipManagement";
-import { useGetApiAuthMe } from "../api/generated/auth/auth";
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Spinner } from '@fluentui/react-components';
+import { DashboardLayout } from '../layouts/DashboardLayout';
+import ProtectedRoute from './ProtectedRoute';
+import { GuestRoute } from './GuestRoute';
+import { RoleProtectedRoute } from './RoleProtectedRoute';
+import { useAuth } from '../context/AuthContext';
 
-function isAdminOrHR(role?: string): boolean {
-  if (!role) return false;
-  const r = role.toLowerCase();
-  return r === 'admin' || r === 'hr' || r === '1' || r === '2';
-}
+// Route-level code splitting using React.lazy
+const LoginForm = lazy(() => import('../pages/Login/Login').then((m) => ({ default: m.LoginForm })));
+const EmployeesPage = lazy(() => import('../pages/Employees/Employee').then((m) => ({ default: m.EmployeesPage })));
+const LeaveManagement = lazy(() => import('../pages/Leaves/LeaveManagement').then((m) => ({ default: m.LeaveManagement })));
+const PayslipManagement = lazy(() => import('../pages/Payslip/PayslipManagement').then((m) => ({ default: m.PayslipManagement })));
+const AttendanceManagement = lazy(() => import('../pages/Attendance/AttendanceManagement').then((m) => ({ default: m.AttendanceManagement })));
+const EmployeeDashboard = lazy(() => import('../pages/Dashboard/EmployeeDashboard').then((m) => ({ default: m.EmployeeDashboard })));
+
+const PageFallback: React.FC = () => (
+  <div className="w-full h-full min-h-[300px] flex items-center justify-center">
+    <Spinner size="medium" label="Loading view..." />
+  </div>
+);
 
 export function AppRoutes() {
-  const { data: meResponse } = useGetApiAuthMe({
-    query: {
-      retry: false,
-      staleTime: 30_000,
-    },
-  });
-
-  const user = (meResponse as any)?.data ?? meResponse;
-  const userRole: string | undefined =
-    user?.role ?? (Array.isArray(user?.roles) ? user.roles[0] : undefined);
-  const isAdmin = isAdminOrHR(userRole);
+  const { isAdmin } = useAuth();
+  const defaultRedirectPath = isAdmin ? '/dashboard/employees' : '/dashboard/attendance';
 
   return (
-    <Routes>
-      {/* 1. Guest-only routes */}
-      <Route element={<GuestRoute />}>
-        <Route path="/login" element={<LoginForm />} />
-      </Route>
-
-      {/* 2. Protected routes */}
-      <Route element={<ProtectedRoute />}>
-        <Route
-          path="/dashboard"
-          element={
-            <DashboardLayout>
-              <Outlet />
-            </DashboardLayout>
-          }
-        >
-          <Route
-            index
-            element={
-              isAdmin ? (
-                <EmployeesPage />
-              ) : (
-                <Navigate to="/dashboard/leaves" replace />
-              )
-            }
-          />
-          <Route
-            path="employees"
-            element={
-              isAdmin ? (
-                <EmployeesPage />
-              ) : (
-                <Navigate to="/dashboard/leaves" replace />
-              )
-            }
-          />
-          <Route path="leaves" element={<LeaveManagement isAdmin={isAdmin} />} />
-          <Route path="payslips" element={<PayslipManagement isAdmin={isAdmin} />} />
-
-          {/* Catch-all for sub-routes */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    <Suspense fallback={<PageFallback />}>
+      <Routes>
+        {/* 1. Guest-only routes */}
+        <Route element={<GuestRoute />}>
+          <Route path="/login" element={<LoginForm />} />
         </Route>
-      </Route>
 
-      {/* 3. Default entry point */}
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        {/* 2. Protected routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/dashboard"
+            element={
+              <DashboardLayout>
+                <Outlet />
+              </DashboardLayout>
+            }
+          >
+            {/* Default index route */}
+            <Route index element={<Navigate to={defaultRedirectPath} replace />} />
+
+            {/* Overview / Dashboard Home */}
+            <Route path="overview" element={<EmployeeDashboard />} />
+
+            {/* Role-gated Employee Directory */}
+            <Route element={<RoleProtectedRoute isAllowed={isAdmin} fallbackPath="/dashboard/attendance" />}>
+              <Route path="employees" element={<EmployeesPage />} />
+            </Route>
+
+            <Route path="attendance" element={<AttendanceManagement isAdmin={isAdmin} />} />
+            <Route path="leaves" element={<LeaveManagement isAdmin={isAdmin} />} />
+            <Route path="payslips" element={<PayslipManagement isAdmin={isAdmin} />} />
+
+            {/* Fallback for invalid dashboard sub-routes */}
+            <Route path="*" element={<Navigate to={defaultRedirectPath} replace />} />
+          </Route>
+        </Route>
+
+        {/* 3. Global catch-all routes */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 }

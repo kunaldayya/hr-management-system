@@ -1,31 +1,21 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { Spinner } from "@fluentui/react-components";
-import { useGetApiAuthMe } from "../api/generated/auth/auth";
+import { Navigate, Outlet } from 'react-router-dom';
+import { Spinner } from '@fluentui/react-components';
+import { useAuth } from '../context/AuthContext';
 
 export function GuestRoute() {
-  const { data, isLoading, isError } = useGetApiAuthMe({
-    query: {
-      retry: false,
-      staleTime: 0,
-    },
-  });
+  const { isLoading, isAuthenticated } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="min-h-screen w-screen flex justify-center items-center bg-slate-100">
-        <Spinner size="large" label="Loading..." />
+      <div className="min-h-screen w-screen flex items-center justify-center bg-slate-50">
+        <Spinner size="large" label="Checking session..." />
       </div>
     );
   }
 
-  // Extract user from wrapped or unwrapped response
-  const user = (data as any)?.data ?? data;
-
-  // If authenticated and not in error state, redirect to dashboard
-  if (!isError && user?.email) {
+  if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // Not logged in — allow access to guest routes (login page)
   return <Outlet />;
 }

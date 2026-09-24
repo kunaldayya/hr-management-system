@@ -23,9 +23,9 @@ import {
   AddRegular,
 } from '@fluentui/react-icons';
 
-import { usePostApiPayslipsGenerate } from '../api/generated/payslips/payslips';
-import { useGetApiEmployees } from '../api/generated/employees/employees';
-import { axiosInstance } from '../lib/axios-instance';
+import { usePostApiPayslipsGenerate } from '../../api/generated/payslips/payslips';
+import { useGetApiEmployees } from '../../api/generated/employees/employees';
+import { axiosInstance } from '../../lib/axios-instance';
 import { PayslipView, type PayslipItem } from './PayslipView';
 
 const MONTH_NAMES = [

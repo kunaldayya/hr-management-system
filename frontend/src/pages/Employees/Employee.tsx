@@ -6,10 +6,10 @@ import { AddRegular } from '@fluentui/react-icons';
 import {
   usePostApiEmployeesUpsert,
   getGetApiEmployeesQueryKey,
-} from '../api/generated/employees/employees';
-import type { EmployeeDto, UpsertEmployeeCommand } from '../api/generated/model';
-import { EmployeeTable } from '../features/employees/components/EmployeeTable';
-import { EmployeeModal } from '../features/employees/components/EmployeeModal';
+} from '../../api/generated/employees/employees';
+import type { EmployeeDto, UpsertEmployeeCommand } from '../../api/generated/model';
+import { EmployeeTable } from '../../features/employees/components/EmployeeTable';
+import { EmployeeModal } from '../../features/employees/components/EmployeeModal';
 
 export function EmployeesPage() {
   const queryClient = useQueryClient();

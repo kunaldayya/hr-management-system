@@ -9,24 +9,28 @@ import {
   Tooltip,
 } from '@fluentui/react-components';
 import {
-  People24Regular,
   SignOutRegular,
   Alert24Regular,
   Building24Filled,
   Person24Regular,
   CalendarCheckmark24Regular,
   DocumentEdit24Regular,
+  Clock24Regular,
+  People24Regular,
+  Dashboard20Regular,
   PanelLeftContract24Regular,
   PanelLeftExpand24Regular,
 } from '@fluentui/react-icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 
-// Import the generated Orval auth hooks
-import { useGetApiAuthMe, usePostApiAuthLogout } from '../api/generated/auth/auth';
+import { useAuth } from '../context/AuthContext';
+import { usePostApiAuthLogout } from '../api/generated/auth/auth';
 
 const NAV_ITEMS = [
-  { key: 'employees', label: 'Employees', path: '/dashboard/employees', icon: People24Regular },
+  { key: 'overview', label: 'Dashboard', path: '/dashboard/overview', icon: Dashboard20Regular },
+  { key: 'employees', label: 'Employees', path: '/dashboard/employees', icon: People24Regular, adminOnly: true },
+  { key: 'attendance', label: 'Attendance', path: '/dashboard/attendance', icon: Clock24Regular },
   { key: 'leaves', label: 'Leaves', path: '/dashboard/leaves', icon: CalendarCheckmark24Regular },
   { key: 'payslips', label: 'Payslips', path: '/dashboard/payslips', icon: DocumentEdit24Regular },
 ];
@@ -37,33 +41,15 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
   const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
 
-  // 1. Fetch current authenticated user details from API
-  const { data: meResponse, isLoading: isUserLoading } = useGetApiAuthMe();
+  const { user, userRole, isAdmin, isLoading } = useAuth();
+  const logoutMutation = usePostApiAuthLogout();
 
-  // Extract user payload (handling wrapper if present)
-  const user = (meResponse as any)?.data ?? meResponse;
-
-  // Extract Name and Role dynamically with fallbacks
-  const userName = user?.fullName || user?.name || user?.email || 'User';
-  const rawRole: string = user?.role ?? (Array.isArray(user?.roles) ? user.roles[0] : 'Employee');
-  const userRole = rawRole;
-  const normalizedRole = String(rawRole).toLowerCase();
-  const isAdmin = normalizedRole === 'admin' || normalizedRole === 'hr' || normalizedRole === '1' || normalizedRole === '2';
-
-  const visibleNavItems = NAV_ITEMS.filter((item) => {
-    if (item.key === 'employees') {
-      return isAdmin;
-    }
-    return true;
-  });
-
-  const activeTab = visibleNavItems.find((item) => pathname.includes(item.path))?.key || (isAdmin ? 'employees' : 'leaves');
+  const userName = user?.email?.split('@')[0] || 'User';
+  const visibleNavItems = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin);
 
   const handleLogout = () => {
-    // Always clean up client-side state immediately
     localStorage.removeItem('accessToken');
     queryClient.clear();
-    // Fire logout to backend (revoke refresh token), then navigate regardless
     logoutMutation.mutate(undefined, {
       onSettled: () => {
         navigate('/login', { replace: true });
@@ -71,20 +57,18 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
     });
   };
 
-  const logoutMutation = usePostApiAuthLogout();
-
   return (
-    <div className="min-h-screen w-full bg-slate-100 text-slate-800 flex overflow-hidden font-sans antialiased">
+    <div className="h-screen max-h-screen w-full bg-slate-100 text-slate-800 flex overflow-hidden font-sans antialiased box-border">
       {/* Sidebar */}
       <aside
-        className={`relative z-20 flex flex-col justify-between bg-[#0B132B] text-slate-300 transition-[width] duration-200 ease-in-out overflow-hidden ${
+        className={`relative z-20 flex flex-col justify-between bg-[#0B132B] text-slate-300 transition-all duration-300 ease-in-out select-none h-full ${
           collapsed ? 'w-20' : 'w-64'
         }`}
       >
-        <div className="flex flex-col p-4 gap-5">
+        <div className="flex flex-col p-4 gap-4 overflow-hidden">
           {/* Brand Header */}
-          <div className={`flex items-center gap-3 py-1 ${collapsed ? 'justify-center' : ''}`}>
-            <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0">
+          <div className={`flex items-center gap-3 py-1 shrink-0 ${collapsed ? 'justify-center' : 'px-2'}`}>
+            <div className="p-2 rounded-xl bg-blue-600 text-white shrink-0 shadow-md shadow-blue-500/20">
               <Building24Filled />
             </div>
             {!collapsed && (
@@ -95,42 +79,46 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
             )}
           </div>
 
-          {/* User Badge - Updated with Dynamic Name & Role */}
-          {!collapsed && (
-            <div className="p-3 rounded-xl bg-[#142042] flex items-center gap-3 border border-slate-800/80">
-              <Avatar name={userName} size={36} color="brand" />
+          {/* User Profile Card */}
+          <div className={`rounded-xl bg-[#142042] border border-slate-800/80 flex items-center transition-all shrink-0 ${
+            collapsed ? 'p-2 justify-center' : 'p-3 gap-3'
+          }`}>
+            <Tooltip content={collapsed ? `${userName} (${userRole})` : ''} positioning="after" relationship="label">
+              <Avatar name={userName} size={36} color="brand" className="shrink-0" />
+            </Tooltip>
+            {!collapsed && (
               <div className="flex flex-col overflow-hidden whitespace-nowrap">
                 <span className="text-sm font-semibold text-white truncate">
-                  {isUserLoading ? 'Loading...' : userName}
+                  {isLoading ? 'Loading...' : userName}
                 </span>
-                <span className="text-xs text-slate-400 truncate">
-                  {isUserLoading ? '...' : userRole}
+                <span className="text-xs text-slate-400 truncate capitalize">
+                  {isLoading ? '...' : userRole ?? 'Employee'}
                 </span>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {!collapsed && (
-            <span className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase px-2 -mb-2">
-              Navigation
+            <span className="text-[11px] font-semibold tracking-wider text-slate-500 uppercase px-2 -mb-2 shrink-0">
+              Menu
             </span>
           )}
 
           {/* Nav List */}
-          <nav className="flex flex-col gap-1">
+          <nav className="flex flex-col gap-1 overflow-y-auto min-h-0">
             {visibleNavItems.map(({ key, label, path, icon: Icon }) => {
-              const isActive = activeTab === key;
+              const isActive = pathname.startsWith(path);
               const navBtn = (
                 <button
                   key={key}
                   onClick={() => navigate(path)}
-                  className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-medium text-sm transition-colors group ${
+                  className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group shrink-0 ${
                     isActive
                       ? 'bg-blue-600/20 text-blue-400 font-semibold border-l-4 border-blue-500 rounded-l-none'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
                   } ${collapsed ? 'justify-center px-0' : ''}`}
                 >
-                  <Icon className={`shrink-0 ${isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
+                  <Icon className={`shrink-0 transition-colors ${isActive ? 'text-blue-400' : 'text-slate-400 group-hover:text-slate-200'}`} />
                   {!collapsed && <span className="truncate whitespace-nowrap">{label}</span>}
                 </button>
               );
@@ -147,7 +135,7 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </div>
 
         {/* Footer Toggle Button */}
-        <div className="p-4 border-t border-slate-800/80">
+        <div className="p-4 border-t border-slate-800/80 shrink-0">
           <button
             onClick={() => setCollapsed((prev) => !prev)}
             className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors ${
@@ -161,19 +149,19 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
         </div>
       </aside>
 
-      {/* Main Container */}
-      <div className="flex-1 flex flex-col overflow-hidden bg-slate-50">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-slate-50">
         {/* Header Bar */}
-        <header className="h-16 px-8 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm">
-          <h1 className="text-slate-800 font-semibold text-lg">
-            Welcome,{' '}
-            <span className="text-blue-600">
-              {isUserLoading ? 'Loading...' : userName}
-            </span>
+        <header className="h-14 px-6 bg-white border-b border-slate-200 flex items-center justify-between shrink-0 shadow-sm">
+          <h1 className="text-slate-800 font-semibold text-base">
+            Welcome, <span className="text-blue-600">{isLoading ? 'User' : userName}</span>
           </h1>
 
-          <div className="flex items-center gap-4">
-            <button className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 transition-colors" aria-label="Notifications">
+          <div className="flex items-center gap-3">
+            <button
+              className="p-1.5 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+              aria-label="Notifications"
+            >
               <Alert24Regular />
             </button>
 
@@ -183,16 +171,13 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
                   <Avatar name={userName} size={32} color="brand" />
                 </button>
               </MenuTrigger>
-              <MenuPopover className="!bg-white !border !border-slate-200 !rounded-xl !p-1.5 !shadow-lg">
+              <MenuPopover className="p-1 shadow-lg rounded-xl">
                 <MenuList>
-                  <MenuItem icon={<Person24Regular className="text-slate-600" />} className="!rounded-lg hover:!bg-slate-100 !text-slate-700">
-                    Profile Settings
-                  </MenuItem>
+                  <MenuItem icon={<Person24Regular />}>Profile Settings</MenuItem>
                   <MenuItem
                     icon={<SignOutRegular className="text-red-500" />}
                     onClick={handleLogout}
                     disabled={logoutMutation.isPending}
-                    className="!rounded-lg hover:!bg-red-50 !text-red-600"
                   >
                     {logoutMutation.isPending ? 'Logging out...' : 'Log out'}
                   </MenuItem>
@@ -202,8 +187,8 @@ export const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({ child
           </div>
         </header>
 
-        {/* Content Body */}
-        <main className="flex-1 p-8 overflow-y-auto bg-slate-50">
+        {/* Dynamic Route Content */}
+        <main className="flex-1 flex flex-col p-4 md:p-5 min-h-0 overflow-hidden bg-slate-50">
           {children}
         </main>
       </div>

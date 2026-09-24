@@ -1,4 +1,5 @@
 ﻿using HR.Application.Common.Interfaces;
+using HR.Domain.Entities;
 using HR.Infrastructure.Configurations;
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
@@ -14,4 +15,9 @@ public class MongoContext(IOptions<MongoSettings> options) : IMongoContext
     );
 
     public IMongoCollection<T> GetCollection<T>(string name) => Database.GetCollection<T>(name);
+
+    public IMongoCollection<AttendanceRecord> AttendanceRecords =>
+        GetCollection<AttendanceRecord>("AttendanceRecords");
+    public IMongoCollection<User> Users =>
+        GetCollection<User>("users");
 }

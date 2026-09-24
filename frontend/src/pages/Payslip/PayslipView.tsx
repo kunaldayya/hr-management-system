@@ -113,13 +113,13 @@ export function PayslipView({ payslip, onBack }: PayslipViewProps) {
             </div>
 
             <div className="flex justify-between items-center px-6 py-3.5">
-              <span>Allowances</span>
-              <span className="text-slate-900">+${payslip.allowances?.toLocaleString()}</span>
+            <span>Allowances</span>
+            <span className="text-green-600">+${payslip.allowances?.toLocaleString()}</span>
             </div>
 
             <div className="flex justify-between items-center px-6 py-3.5">
-              <span>Deductions</span>
-              <span className="text-slate-900">-${payslip.deductions?.toLocaleString()}</span>
+            <span>Deductions</span>
+            <span className="text-red-600">-${payslip.deductions?.toLocaleString()}</span>
             </div>
           </div>
 

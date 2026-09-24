@@ -28,8 +28,8 @@ import {
   usePutApiLeavesIdReject,
   getGetApiLeavesQueryKey,
   getGetApiLeavesMyLeavesQueryKey,
-} from '../api/generated/leaves/leaves';
-import type { LeaveType } from '../api/generated/model';
+} from '../../api/generated/leaves/leaves';
+import type { LeaveType } from '../../api/generated/model';
 
 interface LeaveManagementProps {
   isAdmin?: boolean;
