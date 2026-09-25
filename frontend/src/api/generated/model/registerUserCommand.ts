@@ -23,6 +23,5 @@ export interface RegisterUserCommand {
   /** @nullable */
   jobTitle?: string | null;
   salary?: number;
-  /** @nullable */
-  dateOfJoining?: string | null;
+  dateOfJoining?: string;
 }

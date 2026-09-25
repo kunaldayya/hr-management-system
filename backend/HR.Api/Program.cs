@@ -34,48 +34,40 @@ builder.Services.AddCors(options =>
 });
 
 // JWT Authentication
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.RequireHttpsMetadata = false;
-    options.SaveToken = true;
-
-    options.TokenValidationParameters = new TokenValidationParameters
+// JWT Authentication
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuerSigningKey = true,
+        options.RequireHttpsMetadata = false;
+        options.SaveToken = true;
 
-        IssuerSigningKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(
-                builder.Configuration["JwtSettings:Secret"]
-                ?? "YourSuperSecretKeyHere12345!"
-            )
-        ),
-
-        ValidateIssuer = false,
-        ValidateAudience = false,
-        ValidateLifetime = true
-    };
-
-    // Read JWT from HttpOnly cookie
-    options.Events = new JwtBearerEvents
-    {
-        OnMessageReceived = context =>
+        options.TokenValidationParameters = new TokenValidationParameters
         {
-            if (context.Request.Cookies.TryGetValue(
-                "accessToken",
-                out var token))
-            {
-                context.Token = token;
-            }
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(
+                    builder.Configuration["JwtSettings:Secret"]
+                    ?? "YourSuperSecretKeyHere12345!"
+                )
+            ),
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true
+        };
 
-            return Task.CompletedTask;
-        }
-    };
-});
+        // Read JWT from HttpOnly cookie
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Cookies.TryGetValue("accessToken", out var token))
+                {
+                    context.Token = token;
+                }
+                return Task.CompletedTask;
+            }
+        };
+    });
 
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -136,8 +128,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Seed database (clean up legacy ObjectId docs + create default users for all roles)
-await HR.Infrastructure.Persistence.DatabaseSeeder.SeedAsync(app.Services);
 
 app.Run();

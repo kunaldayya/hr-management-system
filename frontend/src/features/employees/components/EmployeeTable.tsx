@@ -6,7 +6,6 @@ import {
   TableHeaderCell,
   TableBody,
   TableCell,
-  TableCellLayout,
   Button,
   Spinner,
   Badge,
@@ -102,89 +101,93 @@ export function EmployeeTable({ onEdit }: EmployeeTableProps) {
   });
 
   return (
-    <div className="w-full bg-white border border-slate-200 rounded-md p-5 shadow-sm flex flex-col gap-4">
-      {isLoading ? (
-        <div className="py-12 flex justify-center items-center">
-          <Spinner label="Loading employees…" />
-        </div>
-      ) : (
-        <div className="w-full overflow-x-auto">
-          <Table className="w-full min-w-[650px]" aria-label="Employee Table">
-            <TableHeader className="border-b border-slate-200 bg-slate-50">
+    <main className="w-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden flex flex-col">
+      <div className="w-full overflow-x-auto">
+        <Table className="w-full text-left text-sm text-slate-600">
+          <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+            <TableRow>
+              <TableHeaderCell>Name</TableHeaderCell>
+              <TableHeaderCell>Email</TableHeaderCell>
+              <TableHeaderCell>Role</TableHeaderCell>
+              <TableHeaderCell>Job Title</TableHeaderCell>
+              <TableHeaderCell>Department</TableHeaderCell>
+              <TableHeaderCell>Status</TableHeaderCell>
+              <TableHeaderCell>Date of Joining</TableHeaderCell>
+              <TableHeaderCell className="text-right">Actions</TableHeaderCell>
+            </TableRow>
+          </TableHeader>
+          <TableBody className="divide-y divide-slate-100">
+            {isLoading ? (
               <TableRow>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Name</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Email</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Role</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Job Title</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Department</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Status</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3">Date of Joining</TableHeaderCell>
-                <TableHeaderCell className="!font-semibold !text-slate-700 !py-3 text-right">Actions</TableHeaderCell>
+                <TableCell colSpan={8} className="py-12 text-center text-slate-500">
+                  <div className="inline-flex items-center gap-2 justify-center w-full">
+                    <Spinner size="small" />
+                    Loading employees...
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-slate-100">
-              {employees.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-slate-500">
-                    No employees found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                employees.map((emp) => {
-                  const statusInfo = getStatusConfig(emp.status);
+            ) : employees.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="py-12 text-center text-slate-500">
+                  No employees found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              employees.map((emp, index) => {
+                const statusInfo = getStatusConfig(emp.status);
 
-                  return (
-                    <TableRow key={emp.id} className="hover:bg-slate-50/80 transition-colors">
-                      <TableCell>
-                        <TableCellLayout className="whitespace-nowrap font-medium text-slate-800">
-                          {`${emp.firstName ?? ''} ${emp.lastName ?? ''}`}
-                        </TableCellLayout>
-                      </TableCell>
-                      <TableCell className="text-slate-600">{emp.email ?? '-'}</TableCell>
-                      <TableCell>
-                        <Badge
-                          color={emp.role === 'Admin' ? 'danger' : emp.role === 'HR' ? 'brand' : 'informative'}
-                          appearance="tint"
-                          className="!rounded-sm font-medium"
-                        >
-                          {emp.role ?? 'Employee'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-slate-600">{emp.jobTitle ?? '-'}</TableCell>
-                      <TableCell className="text-slate-600">{getDepartmentLabel(emp.department)}</TableCell>
-                      <TableCell>
-                        <Badge color={statusInfo.color} appearance="tint" className="!rounded-sm font-medium">
-                          {statusInfo.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="whitespace-nowrap text-slate-600">
-                        {emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString() : '-'}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
+                return (
+                  <TableRow key={emp.id ?? index} className="hover:bg-slate-50/80 transition-colors">
+                    <TableCell className="font-medium text-slate-900 whitespace-nowrap">
+                      {`${emp.firstName ?? ''} ${emp.lastName ?? ''}`}
+                    </TableCell>
+                    <TableCell className="text-slate-600">{emp.email ?? '-'}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge
+                        appearance="tint"
+                        color={emp.role === 'Admin' ? 'danger' : emp.role === 'HR' ? 'brand' : 'informative'}
+                      >
+                        {emp.role ?? 'Employee'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-600">{emp.jobTitle ?? '-'}</TableCell>
+                    <TableCell className="text-slate-600">{getDepartmentLabel(emp.department)}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge appearance="tint" color={statusInfo.color}>
+                        {statusInfo.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-600 whitespace-nowrap">
+                      {emp.dateOfJoining ? new Date(emp.dateOfJoining).toLocaleDateString() : '-'}
+                    </TableCell>
+                    <TableCell className="text-right whitespace-nowrap">
+                      <div className="flex justify-end gap-1">
                         <Button
+                          size="small"
                           appearance="subtle"
                           icon={<EditRegular className="text-slate-600" />}
                           onClick={() => onEdit(emp)}
                           className="!rounded-sm hover:!bg-slate-200/60"
                         />
                         <Button
+                          size="small"
                           appearance="subtle"
                           icon={<DeleteRegular className="text-red-600" />}
                           onClick={() => emp.id && setDeleteId(emp.id)}
                           className="!rounded-sm hover:!bg-red-50"
                         />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-      {/* Pagination Container */}
-      <div className="pt-3 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-600 font-medium">
+      {/* Pagination Footer */}
+      <div className="p-4 border-t border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs text-slate-600 font-medium">
         <span>
           Page <strong className="text-slate-800">{pageIndex}</strong> of <strong className="text-slate-800">{totalPages}</strong> ({totalCount} total)
         </span>
@@ -234,6 +237,6 @@ export function EmployeeTable({ onEdit }: EmployeeTableProps) {
           </DialogBody>
         </DialogSurface>
       </Dialog>
-    </div>
+    </main>
   );
 }

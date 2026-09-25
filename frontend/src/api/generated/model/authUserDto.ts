@@ -8,8 +8,10 @@ import type { UserRole } from './userRole';
 
 export interface AuthUserDto {
   /** @nullable */
-  email?: string | null;
-  role?: UserRole;
+  id?: string | null;
   /** @nullable */
-  accessToken?: string | null;
+  email?: string | null;
+  /** @nullable */
+  fullName?: string | null;
+  role?: UserRole;
 }

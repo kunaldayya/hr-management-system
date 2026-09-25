@@ -7,7 +7,8 @@ public class ApiResponse<T>
     public bool Status { get; set; }
     public string Message { get; set; } = string.Empty;
 
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    // Do not use JsonIgnore WhenWritingNull on Data: for T=bool this property is
+    // a non-nullable value type and System.Text.Json throws at serialize time.
     public T? Data { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]

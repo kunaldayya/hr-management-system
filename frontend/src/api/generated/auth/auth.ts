@@ -53,22 +53,12 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type postApiAuthRegisterResponse200TextPlain = {
+export type postApiAuthRegisterResponse200 = {
   data: AuthUserDtoApiResponse
   status: 200
 }
 
-export type postApiAuthRegisterResponse200ApplicationJson = {
-  data: AuthUserDtoApiResponse
-  status: 200
-}
-
-export type postApiAuthRegisterResponse200TextJson = {
-  data: AuthUserDtoApiResponse
-  status: 200
-}
-
-export type postApiAuthRegisterResponseSuccess = (postApiAuthRegisterResponse200TextPlain | postApiAuthRegisterResponse200ApplicationJson | postApiAuthRegisterResponse200TextJson) & {
+export type postApiAuthRegisterResponseSuccess = (postApiAuthRegisterResponse200) & {
   headers: Headers;
 };
 ;
@@ -156,22 +146,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPostApiAuthRegisterMutationOptions(options), queryClient);
     }
-    export type postApiAuthLoginResponse200TextPlain = {
+    export type postApiAuthLoginResponse200 = {
   data: AuthUserDtoApiResponse
   status: 200
 }
 
-export type postApiAuthLoginResponse200ApplicationJson = {
-  data: AuthUserDtoApiResponse
-  status: 200
-}
-
-export type postApiAuthLoginResponse200TextJson = {
-  data: AuthUserDtoApiResponse
-  status: 200
-}
-
-export type postApiAuthLoginResponseSuccess = (postApiAuthLoginResponse200TextPlain | postApiAuthLoginResponse200ApplicationJson | postApiAuthLoginResponse200TextJson) & {
+export type postApiAuthLoginResponseSuccess = (postApiAuthLoginResponse200) & {
   headers: Headers;
 };
 ;
@@ -259,22 +239,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPostApiAuthLoginMutationOptions(options), queryClient);
     }
-    export type getApiAuthMeResponse200TextPlain = {
+    export type getApiAuthMeResponse200 = {
   data: CurreUserDtoApiResponse
   status: 200
 }
 
-export type getApiAuthMeResponse200ApplicationJson = {
-  data: CurreUserDtoApiResponse
-  status: 200
-}
-
-export type getApiAuthMeResponse200TextJson = {
-  data: CurreUserDtoApiResponse
-  status: 200
-}
-
-export type getApiAuthMeResponseSuccess = (getApiAuthMeResponse200TextPlain | getApiAuthMeResponse200ApplicationJson | getApiAuthMeResponse200TextJson) & {
+export type getApiAuthMeResponseSuccess = (getApiAuthMeResponse200) & {
   headers: Headers;
 };
 ;
@@ -375,22 +345,12 @@ export function useGetApiAuthMe<TData = Awaited<ReturnType<typeof getApiAuthMe>>
 
 
 
-export type postApiAuthLogoutResponse200TextPlain = {
+export type postApiAuthLogoutResponse200 = {
   data: BooleanApiResponse
   status: 200
 }
 
-export type postApiAuthLogoutResponse200ApplicationJson = {
-  data: BooleanApiResponse
-  status: 200
-}
-
-export type postApiAuthLogoutResponse200TextJson = {
-  data: BooleanApiResponse
-  status: 200
-}
-
-export type postApiAuthLogoutResponseSuccess = (postApiAuthLogoutResponse200TextPlain | postApiAuthLogoutResponse200ApplicationJson | postApiAuthLogoutResponse200TextJson) & {
+export type postApiAuthLogoutResponseSuccess = (postApiAuthLogoutResponse200) & {
   headers: Headers;
 };
 ;

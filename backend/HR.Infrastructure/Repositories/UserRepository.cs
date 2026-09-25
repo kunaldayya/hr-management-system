@@ -39,4 +39,4 @@ public class UserRepository : IUserRepository
 
     public async Task DeleteAsync(string id, CancellationToken cancellationToken = default) =>
         await _users.DeleteOneAsync(u => u.Id == id, cancellationToken);
-}
+} 

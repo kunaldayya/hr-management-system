@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   Button,
   Table,
@@ -20,7 +20,6 @@ import {
 } from '@fluentui/react-components';
 import {
   Eye20Regular,
-  AddRegular,
 } from '@fluentui/react-icons';
 
 import { usePostApiPayslipsGenerate } from '../../api/generated/payslips/payslips';
@@ -34,6 +33,8 @@ const MONTH_NAMES = [
 ];
 
 export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
+  const queryClient = useQueryClient();
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPayslip, setSelectedPayslip] = useState<PayslipItem | null>(null);
 
@@ -54,12 +55,13 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
   const employees: any[] = rawEmployees?.items ?? rawEmployees?.data?.items ?? [];
 
   // Fetch payslips based on role
+  const payslipsQueryKey = isAdmin ? ['/api/Payslips'] : ['/api/Payslips/my-payslips'];
+
   const {
     data: payslipsResponse,
-    refetch,
     isLoading,
   } = useQuery({
-    queryKey: isAdmin ? ['/api/Payslips'] : ['/api/Payslips/my-payslips'],
+    queryKey: payslipsQueryKey,
     queryFn: () =>
       axiosInstance<any>(isAdmin ? '/api/Payslips' : '/api/Payslips/my-payslips', {
         method: 'GET',
@@ -92,7 +94,9 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
         onSuccess: () => {
           setIsModalOpen(false);
           setEmployeeId('');
-          refetch();
+          // Automatically invalidates cache so TanStack Query triggers a background auto-refresh
+          queryClient.invalidateQueries({ queryKey: ['/api/Payslips'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/Payslips/my-payslips'] });
         },
       }
     );
@@ -109,14 +113,14 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
   }
 
   return (
-    <div className="w-full flex flex-col gap-6 p-6">
-      {/* Header */}
+    <div className="w-full flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
+      {/* Responsive Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Payslip Management
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isAdmin
               ? 'Generate and review employee salary slips.'
               : 'View and download your monthly salary slips.'}
@@ -126,109 +130,166 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
         {isAdmin && (
           <Button
             appearance="primary"
-            icon={<AddRegular />}
             onClick={() => setIsModalOpen(true)}
-            className="!rounded-sm !bg-blue-600 hover:!bg-blue-700 shadow-sm"
+            className="w-full sm:w-auto !rounded-md !bg-blue-600 hover:!bg-blue-700 shadow-sm"
           >
-            Generate Payslip
+           + Generate Payslip
           </Button>
         )}
       </header>
 
-      {/* Payslips Table */}
-      <main className="w-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="w-full overflow-x-auto">
-          <Table className="w-full text-left text-sm text-slate-600">
-            <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              <TableRow>
-                <TableHeaderCell>Employee</TableHeaderCell>
-                <TableHeaderCell>Period</TableHeaderCell>
-                <TableHeaderCell>Basic Salary</TableHeaderCell>
-                <TableHeaderCell>Allowances</TableHeaderCell>
-                <TableHeaderCell>Deductions</TableHeaderCell>
-                <TableHeaderCell>Net Salary</TableHeaderCell>
-                <TableHeaderCell className="text-right">Action</TableHeaderCell>
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-slate-500">
-                    <div className="inline-flex items-center gap-2 justify-center w-full">
-                      <Spinner size="small" />
-                      Loading payslips...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : payslips.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-slate-500">
-                    No payslips found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                payslips.map((p, index) => {
-                  const empObj = employees.find((x) => x.id === p.employeeId);
-                  const displayName = p.employeeName || (empObj ? `${empObj.firstName} ${empObj.lastName}` : 'Employee');
-                  const email = empObj?.email ?? '';
-                  const position = empObj?.position ?? empObj?.department ?? 'Employee';
-                  const monthName = MONTH_NAMES[(p.month || 1) - 1] || `Month ${p.month}`;
-
-                  return (
-                    <TableRow key={p.id ?? index} className="hover:bg-slate-50/80 transition-colors">
-                      <TableCell className="font-medium text-slate-900 whitespace-nowrap">
-                        {displayName}
-                      </TableCell>
-                      <TableCell className="text-slate-600 whitespace-nowrap">
-                        {monthName} {p.year}
-                      </TableCell>
-                      <TableCell className="text-slate-600 whitespace-nowrap">
-                        ${p.basicSalary?.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-emerald-600 whitespace-nowrap">
-                        +${p.allowances?.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-red-500 whitespace-nowrap">
-                        -${p.deductions?.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="font-semibold text-slate-900 whitespace-nowrap">
-                        ${p.netSalary?.toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-right whitespace-nowrap">
-                        <Button
-                          size="small"
-                          appearance="subtle"
-                          icon={<Eye20Regular />}
-                          onClick={() => setSelectedPayslip({
-                            ...p,
-                            employeeName: displayName,
-                            employeeEmail: email,
-                            position: position
-                          })}
-                          className="!text-blue-600 hover:!bg-blue-50 !rounded-sm font-medium"
-                        >
-                          View / Print
-                        </Button>
-                      </TableCell>
+      {/* Main Container */}
+      <main className="w-full">
+        {isLoading ? (
+          <div className="py-12 bg-white border border-slate-200 rounded-lg text-center text-slate-500 flex items-center gap-2 justify-center">
+            <Spinner size="small" />
+            <span>Loading payslips...</span>
+          </div>
+        ) : payslips.length === 0 ? (
+          <div className="py-12 bg-white border border-slate-200 rounded-lg text-center text-slate-500">
+            No payslips found.
+          </div>
+        ) : (
+          <>
+            {/* Desktop View: Table */}
+            <div className="hidden md:block bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="w-full overflow-x-auto">
+                <Table className="w-full text-left text-sm text-slate-600">
+                  <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <TableRow>
+                      <TableHeaderCell>Employee</TableHeaderCell>
+                      <TableHeaderCell>Period</TableHeaderCell>
+                      <TableHeaderCell>Basic Salary</TableHeaderCell>
+                      <TableHeaderCell>Allowances</TableHeaderCell>
+                      <TableHeaderCell>Deductions</TableHeaderCell>
+                      <TableHeaderCell>Net Salary</TableHeaderCell>
+                      <TableHeaderCell className="text-right">Action</TableHeaderCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-slate-100">
+                    {payslips.map((p, index) => {
+                      const empObj = employees.find((x) => x.id === p.employeeId);
+                      const displayName = p.employeeName || (empObj ? `${empObj.firstName} ${empObj.lastName}` : 'Employee');
+                      const email = empObj?.email ?? '';
+                      const position = empObj?.position ?? empObj?.department ?? 'Employee';
+                      const monthName = MONTH_NAMES[(p.month || 1) - 1] || `Month ${p.month}`;
+
+                      return (
+                        <TableRow key={p.id ?? index} className="hover:bg-slate-50/80 transition-colors">
+                          <TableCell className="font-medium text-slate-900 whitespace-nowrap">
+                            {displayName}
+                          </TableCell>
+                          <TableCell className="text-slate-600 whitespace-nowrap">
+                            {monthName} {p.year}
+                          </TableCell>
+                          <TableCell className="text-slate-600 whitespace-nowrap">
+                            ${p.basicSalary?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-emerald-600 whitespace-nowrap">
+                            +${p.allowances?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-red-500 whitespace-nowrap">
+                            -${p.deductions?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="font-semibold text-slate-900 whitespace-nowrap">
+                            ${p.netSalary?.toLocaleString()}
+                          </TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <Button
+                              size="small"
+                              appearance="subtle"
+                              icon={<Eye20Regular />}
+                              onClick={() => setSelectedPayslip({
+                                ...p,
+                                employeeName: displayName,
+                                employeeEmail: email,
+                                position: position
+                              })}
+                              className="!text-blue-600 hover:!bg-blue-50 !rounded-sm font-medium"
+                            >
+                              View / Print
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Mobile View: Stacked Cards */}
+            <div className="grid grid-cols-1 gap-3 md:hidden">
+              {payslips.map((p, index) => {
+                const empObj = employees.find((x) => x.id === p.employeeId);
+                const displayName = p.employeeName || (empObj ? `${empObj.firstName} ${empObj.lastName}` : 'Employee');
+                const email = empObj?.email ?? '';
+                const position = empObj?.position ?? empObj?.department ?? 'Employee';
+                const monthName = MONTH_NAMES[(p.month || 1) - 1] || `Month ${p.month}`;
+
+                return (
+                  <div
+                    key={p.id ?? index}
+                    className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex flex-col gap-3"
+                  >
+                    <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{displayName}</h3>
+                        <p className="text-xs text-slate-500 font-medium">{monthName} {p.year}</p>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-xs text-slate-400 block uppercase font-semibold">Net Salary</span>
+                        <span className="text-lg font-bold text-blue-600">${p.netSalary?.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2 text-xs bg-slate-50 p-2.5 rounded-md">
+                      <div>
+                        <span className="text-slate-400 block">Basic</span>
+                        <span className="font-medium text-slate-700">${p.basicSalary?.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Allowances</span>
+                        <span className="font-medium text-emerald-600">+${p.allowances?.toLocaleString()}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Deductions</span>
+                        <span className="font-medium text-red-500">-${p.deductions?.toLocaleString()}</span>
+                      </div>
+                    </div>
+
+                    <Button
+                      size="medium"
+                      appearance="outline"
+                      icon={<Eye20Regular />}
+                      onClick={() => setSelectedPayslip({
+                        ...p,
+                        employeeName: displayName,
+                        employeeEmail: email,
+                        position: position
+                      })}
+                      className="w-full !text-blue-600 !border-blue-200 hover:!bg-blue-50 font-medium !rounded-md mt-1"
+                    >
+                      View / Print
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </main>
 
       {/* Generate Payslip Modal */}
       <Dialog open={isModalOpen} onOpenChange={(_, d) => !d.open && setIsModalOpen(false)}>
-        <DialogSurface className="!rounded-md !p-6 max-w-lg w-full bg-white border border-slate-200 shadow-xl">
+        <DialogSurface className="!rounded-lg !p-4 sm:!p-6 max-w-lg w-[calc(100vw-2rem)] sm:w-full bg-white border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleGenerate}>
             <DialogBody>
               <DialogTitle className="text-slate-900 font-semibold text-lg border-b border-slate-200 pb-3 mb-4">
                 Generate Payslip
               </DialogTitle>
 
-              <DialogContent className="flex flex-col gap-4 py-2">
+              <DialogContent className="flex flex-col gap-4 py-1">
                 <div className="flex flex-col gap-1.5">
                   <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Employee
@@ -245,7 +306,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                         }
                       }}
                       required
-                      className="h-9 px-3 rounded-sm border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600"
+                      className="h-10 px-3 rounded-md border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600 w-full"
                     >
                       <option value="">-- Select Employee --</option>
                       {employees.map((emp) => (
@@ -260,12 +321,12 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                       onChange={(_, d) => setEmployeeId(d.value)}
                       placeholder="Enter Employee ID"
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                       Month
@@ -273,7 +334,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                     <select
                       value={month}
                       onChange={(e) => setMonth(Number(e.target.value))}
-                      className="h-9 px-3 rounded-sm border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600"
+                      className="h-10 px-3 rounded-md border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600 w-full"
                     >
                       {MONTH_NAMES.map((m, idx) => (
                         <option key={idx + 1} value={idx + 1}>
@@ -292,7 +353,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                       value={year.toString()}
                       onChange={(_, d) => setYear(Number(d.value))}
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   </div>
                 </div>
@@ -307,11 +368,11 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                     value={basicSalary.toString()}
                     onChange={(_, d) => setBasicSalary(Number(d.value))}
                     required
-                    className="!rounded-sm"
+                    className="!rounded-md"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                       Allowances ($)
@@ -322,7 +383,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                       value={allowances.toString()}
                       onChange={(_, d) => setAllowances(Number(d.value))}
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   </div>
 
@@ -336,7 +397,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                       value={deductions.toString()}
                       onChange={(_, d) => setDeductions(Number(d.value))}
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   </div>
                 </div>
@@ -349,12 +410,12 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                 </div>
               </DialogContent>
 
-              <DialogActions className="pt-4 mt-4 border-t border-slate-200">
+              <DialogActions className="pt-4 mt-4 border-t border-slate-200 flex flex-row justify-end gap-2">
                 <Button
                   appearance="secondary"
                   onClick={() => setIsModalOpen(false)}
                   disabled={generatePayslipMutation.isPending}
-                  className="!rounded-sm"
+                  className="!rounded-md"
                 >
                   Cancel
                 </Button>
@@ -362,7 +423,7 @@ export function PayslipManagement({ isAdmin }: { isAdmin: boolean }) {
                   appearance="primary"
                   type="submit"
                   disabled={generatePayslipMutation.isPending || !employeeId}
-                  className="!rounded-sm !bg-blue-600 hover:!bg-blue-700"
+                  className="!rounded-md !bg-blue-600 hover:!bg-blue-700"
                 >
                   {generatePayslipMutation.isPending ? 'Generating…' : 'Generate'}
                 </Button>

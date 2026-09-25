@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod/v4';
+import { z } from 'zod';
 import {
   Card,
   CardHeader,
@@ -33,11 +33,6 @@ const loginSchema = z.object({
 
 type LoginValues = z.infer<typeof loginSchema>;
 
-const DEMO_CREDENTIALS = [
-  { label: 'Admin', email: 'admin@hrms.com', password: 'Password123!' },
-  { label: 'HR',    email: 'hr@hrms.com',    password: 'Password123!' },
-  { label: 'Employee', email: 'employee@hrms.com', password: 'Password123!' },
-] as const;
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +42,6 @@ export function LoginForm() {
   const {
     control,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
@@ -55,30 +49,24 @@ export function LoginForm() {
   });
 
   const loginMutation = usePostApiAuthLogin({
-    mutation: {
-      onSuccess: async (response) => {
-        // Save access token so axios-instance can attach Authorization: Bearer header
-        const token = (response as any)?.data?.accessToken ?? (response as any)?.accessToken;
-        if (token) {
-          localStorage.setItem('accessToken', token);
-        }
-        queryClient.clear();
-        await queryClient.refetchQueries({ queryKey: getGetApiAuthMeQueryKey() });
-        navigate('/dashboard', { replace: true });
+      mutation: {
+        onSuccess: async () => {
+          // resetQueries is the correct choice here:
+          // - refetchQueries SKIPS queries that are in `error` state by default
+          // - The /me query starts in error state (401 before login)
+          // - resetQueries wipes the error and forces a clean fresh fetch
+          await queryClient.resetQueries({ queryKey: getGetApiAuthMeQueryKey() });
+
+          navigate('/dashboard', { replace: true });
+        },
+        onError: (error) => {
+          console.error('Login failed:', error);
+        },
       },
-      onError: (error) => {
-        console.error('Login failed:', error);
-      },
-    },
-  });
+    });
 
   const onSubmit = (values: LoginValues) => {
     loginMutation.mutate({ data: values });
-  };
-
-  const fillDemo = (email: string, password: string) => {
-    setValue('email', email, { shouldValidate: true });
-    setValue('password', password, { shouldValidate: true });
   };
 
   return (
@@ -101,25 +89,6 @@ export function LoginForm() {
             </div>
           }
         />
-
-        {/* Demo credential quick-fill buttons */}
-        <div className="flex flex-col gap-1.5">
-          <Text size={100} className="text-xs text-slate-400 uppercase tracking-wider font-semibold text-center">
-            Quick Sign-In (Demo)
-          </Text>
-          <div className="flex gap-2">
-            {DEMO_CREDENTIALS.map(({ label, email, password }) => (
-              <button
-                key={label}
-                type="button"
-                onClick={() => fillDemo(email, password)}
-                className="flex-1 text-xs py-1.5 px-2 rounded border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors font-medium"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         <div className="w-full h-px bg-slate-200" />
 

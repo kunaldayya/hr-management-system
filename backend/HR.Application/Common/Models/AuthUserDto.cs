@@ -3,7 +3,8 @@ using HR.Domain.Enums;
 namespace HR.Application.Common.Models;
 
 public record AuthUserDto(
+    string Id,
     string Email,
-    UserRole Role,
-    string? AccessToken = null
+    string FullName,
+    UserRole Role
 );

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableHeader,
@@ -30,7 +30,24 @@ import {
   useGetApiAttendanceAdminAll,
   usePutApiAttendanceIdManualOverride,
 } from '../../api/generated/attendance/attendance';
-import { ClockInWidget } from './ClockInWidget';
+
+// Interfaces for strict type safety
+interface AttendanceRecord {
+  id: string | number;
+  employeeName?: string;
+  date: string;
+  clockInTime?: string;
+  clockOutTime?: string;
+  totalHours?: number | string;
+  status?: string;
+}
+
+interface AdminMetrics {
+  totalEmployees?: number;
+  presentToday?: number;
+  lateToday?: number;
+  absentToday?: number;
+}
 
 const MONTHS = [
   { value: 0, label: 'All Months' },
@@ -46,7 +63,9 @@ const MONTHS = [
   { value: 10, label: 'October' },
   { value: 11, label: 'November' },
   { value: 12, label: 'December' },
-];
+] as const;
+
+const YEARS = [2024, 2025, 2026, 2027] as const;
 
 export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
   const [pageIndex, setPageIndex] = useState(1);
@@ -54,49 +73,81 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const pageSize = 10;
 
-  // Manual Override State
-  const [editingRecord, setEditingRecord] = useState<any | null>(null);
+  // Manual Override Form State
+  const [editingRecord, setEditingRecord] = useState<AttendanceRecord | null>(null);
   const [clockInTime, setClockInTime] = useState('');
   const [clockOutTime, setClockOutTime] = useState('');
   const [status, setStatus] = useState('PRESENT');
   const [overrideReason, setOverrideReason] = useState('');
 
-  // 1. Employee history logs
-  const { data: myRecordsResponse, isLoading: isMyRecordsLoading } = useGetApiAttendanceMyRecords(
+  // 1. Employee Log Query
+  const myRecordsQuery = useGetApiAttendanceMyRecords(
     { month: selectedMonth, year: selectedYear, pageIndex, pageSize },
-    { query: { enabled: !isAdmin } }
+    {
+      query: {
+        enabled: !isAdmin,
+        staleTime: 1000 * 60 * 5, // Cache for 5 mins
+      },
+    }
   );
 
-  // 2. Admin logs
-  const {
-    data: adminAllResponse,
-    isLoading: isAdminAllLoading,
-    refetch: refetchAdminRecords,
-  } = useGetApiAttendanceAdminAll(
+  // 2. Admin Log Query
+  const adminAllQuery = useGetApiAttendanceAdminAll(
     { pageIndex, pageSize },
-    { query: { enabled: isAdmin } }
+    {
+      query: {
+        enabled: isAdmin,
+        staleTime: 1000 * 60 * 2, // Cache for 2 mins
+      },
+    }
   );
 
   // 3. Manual Override Mutation
   const overrideMutation = usePutApiAttendanceIdManualOverride();
 
-  const rawMyRecords = (myRecordsResponse as any)?.data ?? myRecordsResponse;
-  const myRecords = rawMyRecords?.items ?? [];
-  const myTotalCount = rawMyRecords?.totalCount ?? 0;
-  const myTotalPages = Math.ceil(myTotalCount / pageSize) || 1;
+  // Normalize data safely using useMemo for optimized re-renders
+  const { currentRecords, totalCount, totalPages, isLoading, metrics } = useMemo(() => {
+    if (isAdmin) {
+      const rawAdmin = (adminAllQuery.data as any)?.data ?? adminAllQuery.data;
+      const records: AttendanceRecord[] = rawAdmin?.records?.items ?? [];
+      const count = rawAdmin?.records?.totalCount ?? 0;
+      const pages = Math.ceil(count / pageSize) || 1;
+      const adminMetrics: AdminMetrics | undefined = rawAdmin?.metrics;
 
-  const rawAdminData = (adminAllResponse as any)?.data ?? adminAllResponse;
-  const adminRecords = rawAdminData?.records?.items ?? [];
-  const adminTotalCount = rawAdminData?.records?.totalCount ?? 0;
-  const adminTotalPages = Math.ceil(adminTotalCount / pageSize) || 1;
-  const metrics = rawAdminData?.metrics;
+      return {
+        currentRecords: records,
+        totalCount: count,
+        totalPages: pages,
+        isLoading: adminAllQuery.isLoading || adminAllQuery.isFetching,
+        metrics: adminMetrics,
+      };
+    } else {
+      const rawMy = (myRecordsQuery.data as any)?.data ?? myRecordsQuery.data;
+      const records: AttendanceRecord[] = rawMy?.items ?? [];
+      const count = rawMy?.totalCount ?? 0;
+      const pages = Math.ceil(count / pageSize) || 1;
 
-  const currentRecords = isAdmin ? adminRecords : myRecords;
-  const totalPages = isAdmin ? adminTotalPages : myTotalPages;
-  const isLoading = isAdmin ? isAdminAllLoading : isMyRecordsLoading;
+      return {
+        currentRecords: records,
+        totalCount: count,
+        totalPages: pages,
+        isLoading: myRecordsQuery.isLoading || myRecordsQuery.isFetching,
+        metrics: undefined,
+      };
+    }
+  }, [
+    isAdmin,
+    adminAllQuery.data,
+    adminAllQuery.isLoading,
+    adminAllQuery.isFetching,
+    myRecordsQuery.data,
+    myRecordsQuery.isLoading,
+    myRecordsQuery.isFetching,
+    pageSize,
+  ]);
 
   // Open Edit Modal
-  const handleOpenEdit = (rec: any) => {
+  const handleOpenEdit = (rec: AttendanceRecord) => {
     setEditingRecord(rec);
     setClockInTime(rec.clockInTime ? new Date(rec.clockInTime).toISOString().slice(0, 16) : '');
     setClockOutTime(rec.clockOutTime ? new Date(rec.clockOutTime).toISOString().slice(0, 16) : '');
@@ -104,13 +155,13 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
     setOverrideReason('');
   };
 
-  // Submit Manual Override Request
+  // Save Override Mutation Handler
   const handleSaveOverride = () => {
     if (!editingRecord?.id) return;
 
     overrideMutation.mutate(
       {
-        id: editingRecord.id,
+        id: editingRecord.id as any,
         data: {
           clockInTime: clockInTime ? new Date(clockInTime).toISOString() : (null as any),
           clockOutTime: clockOutTime ? new Date(clockOutTime).toISOString() : (null as any),
@@ -121,14 +172,14 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
       {
         onSuccess: () => {
           setEditingRecord(null);
-          refetchAdminRecords();
+          adminAllQuery.refetch();
         },
       }
     );
   };
 
-  const renderStatusBadge = (status?: string) => {
-    switch (status?.toUpperCase()) {
+  const renderStatusBadge = (recStatus?: string) => {
+    switch (recStatus?.toUpperCase()) {
       case 'PRESENT':
         return <Badge appearance="filled" color="success">PRESENT</Badge>;
       case 'LATE':
@@ -138,19 +189,19 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
       case 'ABSENT':
         return <Badge appearance="filled" color="danger">ABSENT</Badge>;
       default:
-        return <Badge appearance="tint" color="informative">{status ?? 'N/A'}</Badge>;
+        return <Badge appearance="tint" color="informative">{recStatus ?? 'N/A'}</Badge>;
     }
   };
 
   return (
-    <div className="w-full flex flex-col gap-6 p-6">
+    <div className="w-full flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 gap-4 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Attendance & Time Tracking
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isAdmin
               ? 'Monitor and adjust employee clock-in activities and metrics.'
               : 'Track your daily hours and historical clock-in logs.'}
@@ -158,14 +209,14 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
         </div>
 
         {!isAdmin && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
             <Select
               value={selectedMonth.toString()}
               onChange={(_, data) => {
                 setSelectedMonth(Number(data.value));
                 setPageIndex(1);
               }}
-              className="!min-w-[130px]"
+              className="flex-1 sm:flex-initial !min-w-[120px]"
             >
               {MONTHS.map((m) => (
                 <option key={m.value} value={m.value.toString()}>
@@ -180,9 +231,9 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
                 setSelectedYear(Number(data.value));
                 setPageIndex(1);
               }}
-              className="!min-w-[100px]"
+              className="flex-1 sm:flex-initial !min-w-[90px]"
             >
-              {[2024, 2025, 2026, 2027].map((y) => (
+              {YEARS.map((y) => (
                 <option key={y} value={y.toString()}>
                   {y}
                 </option>
@@ -192,116 +243,174 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
         )}
       </header>
 
-      {/* Clock In Widget (Employees) */}
-      {!isAdmin && <ClockInWidget />}
-
-      {/* Metrics Cards (Admin) */}
+      {/* Admin Metrics Grid */}
       {isAdmin && metrics && (
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 shrink-0">
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Scheduled</span>
-            <p className="text-2xl font-bold text-slate-900 mt-1">{metrics.totalEmployees ?? 0}</p>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 shrink-0">
+          <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-xl shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Total Scheduled
+            </span>
+            <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{metrics.totalEmployees ?? 0}</p>
           </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Present Today</span>
-            <p className="text-2xl font-bold text-emerald-600 mt-1">{metrics.presentToday ?? 0}</p>
+          <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-xl shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Present Today
+            </span>
+            <p className="text-xl sm:text-2xl font-bold text-emerald-600 mt-1">{metrics.presentToday ?? 0}</p>
           </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Late Today</span>
-            <p className="text-2xl font-bold text-amber-600 mt-1">{metrics.lateToday ?? 0}</p>
+          <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-xl shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Late Today
+            </span>
+            <p className="text-xl sm:text-2xl font-bold text-amber-600 mt-1">{metrics.lateToday ?? 0}</p>
           </div>
-          <div className="bg-white border border-slate-200 p-4 rounded-xl shadow-sm">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Absent Today</span>
-            <p className="text-2xl font-bold text-rose-600 mt-1">{metrics.absentToday ?? 0}</p>
+          <div className="bg-white border border-slate-200 p-3.5 sm:p-4 rounded-xl shadow-sm">
+            <span className="text-[10px] sm:text-xs font-semibold text-slate-500 uppercase tracking-wider">
+              Absent Today
+            </span>
+            <p className="text-xl sm:text-2xl font-bold text-rose-600 mt-1">{metrics.absentToday ?? 0}</p>
           </div>
         </div>
       )}
 
-      {/* Logs Table Area */}
+      {/* Main Content Logs Container */}
       <main className="w-full bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden flex flex-col">
-        <div className="w-full overflow-x-auto">
-          <Table className="w-full text-left text-sm text-slate-600">
-            <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              <TableRow>
-                {isAdmin && <TableHeaderCell>Employee</TableHeaderCell>}
-                <TableHeaderCell>Date</TableHeaderCell>
-                <TableHeaderCell>Clock In</TableHeaderCell>
-                <TableHeaderCell>Clock Out</TableHeaderCell>
-                <TableHeaderCell>Total Hours</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                {isAdmin && <TableHeaderCell>Action</TableHeaderCell>}
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-slate-100">
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 5} className="py-12 text-center text-slate-500">
-                    <div className="inline-flex items-center gap-2 justify-center w-full">
-                      <Spinner size="small" />
-                      Loading records...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : currentRecords.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 7 : 5} className="py-12 text-center text-slate-500">
-                    No attendance records found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentRecords.map((rec: any, idx: number) => (
-                  <TableRow key={rec.id ?? idx} className="hover:bg-slate-50/80 transition-colors">
-                    {isAdmin && (
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900">
-                            {rec.employeeName || 'N/A'}
-                          </span>
-                        </div>
-                      </TableCell>
-                    )}
-                    <TableCell className="font-medium text-slate-900">{rec.date}</TableCell>
-                    <TableCell>
-                      {rec.clockInTime ? new Date(rec.clockInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                    </TableCell>
-                    <TableCell>
-                      {rec.clockOutTime ? new Date(rec.clockOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                    </TableCell>
-                    <TableCell className="font-semibold text-slate-900">
-                      {rec.totalHours ? `${rec.totalHours} hrs` : '--'}
-                    </TableCell>
-                    <TableCell>{renderStatusBadge(rec.status)}</TableCell>
-                    {isAdmin && (
-                      <TableCell>
-                        <Button
-                          size="small"
-                          appearance="subtle"
-                          icon={<Edit20Regular />}
-                          onClick={() => handleOpenEdit(rec)}
-                        >
-                          Override
-                        </Button>
-                      </TableCell>
-                    )}
+        {isLoading ? (
+          <div className="py-12 text-center text-slate-500 flex items-center gap-2 justify-center">
+            <Spinner size="small" />
+            <span className="text-sm">Loading records...</span>
+          </div>
+        ) : currentRecords.length === 0 ? (
+          <div className="py-12 text-center text-slate-500 text-sm">
+            No attendance records found.
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View (md screens & up) */}
+            <div className="hidden md:block w-full overflow-x-auto">
+              <Table className="w-full text-left text-sm text-slate-600">
+                <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                  <TableRow>
+                    {isAdmin && <TableHeaderCell>Employee</TableHeaderCell>}
+                    <TableHeaderCell>Date</TableHeaderCell>
+                    <TableHeaderCell>Clock In</TableHeaderCell>
+                    <TableHeaderCell>Clock Out</TableHeaderCell>
+                    <TableHeaderCell>Total Hours</TableHeaderCell>
+                    <TableHeaderCell>Status</TableHeaderCell>
+                    {isAdmin && <TableHeaderCell>Action</TableHeaderCell>}
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                </TableHeader>
+                <TableBody className="divide-y divide-slate-100">
+                  {currentRecords.map((rec, idx) => (
+                    <TableRow key={rec.id ?? idx} className="hover:bg-slate-50/80 transition-colors">
+                      {isAdmin && (
+                        <TableCell>
+                          <span className="font-semibold text-slate-900">{rec.employeeName || 'N/A'}</span>
+                        </TableCell>
+                      )}
+                      <TableCell className="font-medium text-slate-900">{rec.date}</TableCell>
+                      <TableCell>
+                        {rec.clockInTime ? new Date(rec.clockInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                      </TableCell>
+                      <TableCell>
+                        {rec.clockOutTime ? new Date(rec.clockOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        {rec.totalHours ? `${rec.totalHours} hrs` : '--'}
+                      </TableCell>
+                      <TableCell>{renderStatusBadge(rec.status)}</TableCell>
+                      {isAdmin && (
+                        <TableCell>
+                          <Button
+                            size="small"
+                            appearance="subtle"
+                            icon={<Edit20Regular />}
+                            onClick={() => handleOpenEdit(rec)}
+                          >
+                            Override
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
 
-        {/* Pagination Controls */}
-        <div className="flex items-center justify-between px-6 py-3 bg-slate-50 border-t border-slate-200">
-          <span className="text-xs text-slate-500 font-medium">
-            Page {pageIndex} of {totalPages} ({isAdmin ? adminTotalCount : myTotalCount} total logs)
+            {/* Mobile Cards View (below md breakpoint) */}
+            <div className="grid grid-cols-1 gap-3 p-3 md:hidden">
+              {currentRecords.map((rec, idx) => (
+                <div
+                  key={rec.id ?? idx}
+                  className="bg-slate-50/60 border border-slate-200 rounded-lg p-3.5 flex flex-col gap-2.5"
+                >
+                  <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                    <div className="flex flex-col">
+                      {isAdmin && (
+                        <span className="font-bold text-slate-900 text-sm">
+                          {rec.employeeName || 'N/A'}
+                        </span>
+                      )}
+                      <span className="text-xs font-semibold text-slate-600">{rec.date}</span>
+                    </div>
+                    {renderStatusBadge(rec.status)}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 font-medium">Clock In</span>
+                      <span className="text-slate-800 font-semibold mt-0.5">
+                        {rec.clockInTime ? new Date(rec.clockInTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 font-medium">Clock Out</span>
+                      <span className="text-slate-800 font-semibold mt-0.5">
+                        {rec.clockOutTime ? new Date(rec.clockOutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                      </span>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <span className="text-slate-400 font-medium">Total</span>
+                      <span className="text-slate-900 font-bold mt-0.5">
+                        {rec.totalHours ? `${rec.totalHours} hrs` : '--'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {isAdmin && (
+                    <div className="pt-2 border-t border-slate-200/80 flex justify-end">
+                      <Button
+                        size="small"
+                        appearance="outline"
+                        icon={<Edit20Regular />}
+                        onClick={() => handleOpenEdit(rec)}
+                        className="w-full sm:w-auto"
+                      >
+                        Override Entry
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Responsive Pagination Controls */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 sm:px-6 py-3 bg-slate-50 border-t border-slate-200">
+          <span className="text-xs text-slate-500 font-medium text-center sm:text-left">
+            Page {pageIndex} of {totalPages} ({totalCount} total logs)
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-2">
             <Button
               size="small"
               appearance="subtle"
               icon={<ChevronLeft24Regular />}
               disabled={pageIndex <= 1 || isLoading}
               onClick={() => setPageIndex((p) => Math.max(1, p - 1))}
+              className="flex-1 sm:flex-initial"
             >
               Previous
             </Button>
@@ -312,6 +421,7 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
               iconPosition="after"
               disabled={pageIndex >= totalPages || isLoading}
               onClick={() => setPageIndex((p) => p + 1)}
+              className="flex-1 sm:flex-initial"
             >
               Next
             </Button>
@@ -321,7 +431,7 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
 
       {/* Manual Override Modal Dialog */}
       <Dialog open={editingRecord !== null} onOpenChange={(_, d) => !d.open && setEditingRecord(null)}>
-        <DialogSurface className="!rounded-xl !p-6 max-w-md w-full">
+        <DialogSurface className="!rounded-xl !p-4 sm:!p-6 max-w-md w-[calc(100vw-2rem)] sm:w-full max-h-[90vh] overflow-y-auto">
           <DialogBody>
             <DialogTitle className="text-slate-900 font-semibold text-lg border-b border-slate-200 pb-3 mb-4">
               Manual Override Attendance
@@ -333,6 +443,7 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
                   type="datetime-local"
                   value={clockInTime}
                   onChange={(e) => setClockInTime(e.target.value)}
+                  className="w-full"
                 />
               </div>
 
@@ -342,12 +453,13 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
                   type="datetime-local"
                   value={clockOutTime}
                   onChange={(e) => setClockOutTime(e.target.value)}
+                  className="w-full"
                 />
               </div>
 
               <div className="flex flex-col gap-1">
                 <label className="text-xs font-semibold uppercase text-slate-600">Status</label>
-                <Select value={status} onChange={(_, d) => setStatus(d.value)}>
+                <Select value={status} onChange={(_, d) => setStatus(d.value)} className="w-full">
                   <option value="PRESENT">PRESENT</option>
                   <option value="LATE">LATE</option>
                   <option value="HALF_DAY">HALF DAY</option>
@@ -361,18 +473,19 @@ export function AttendanceManagement({ isAdmin }: { isAdmin: boolean }) {
                   value={overrideReason}
                   onChange={(e) => setOverrideReason(e.target.value)}
                   placeholder="e.g. System glitch / Employee forgot to clock in"
+                  className="w-full"
                 />
               </div>
             </DialogContent>
-            <DialogActions className="pt-4 mt-4 border-t border-slate-200">
-              <Button appearance="secondary" onClick={() => setEditingRecord(null)}>
+            <DialogActions className="pt-4 mt-4 border-t border-slate-200 flex flex-col sm:flex-row gap-2">
+              <Button appearance="secondary" onClick={() => setEditingRecord(null)} className="w-full sm:w-auto">
                 Cancel
               </Button>
               <Button
                 appearance="primary"
                 onClick={handleSaveOverride}
                 disabled={overrideMutation.isPending || !overrideReason.trim()}
-                className="!bg-blue-600 hover:!bg-blue-700"
+                className="w-full sm:w-auto !bg-blue-600 hover:!bg-blue-700"
               >
                 {overrideMutation.isPending ? 'Saving...' : 'Save Override'}
               </Button>

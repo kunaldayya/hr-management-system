@@ -6,6 +6,7 @@ namespace HR.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Produces("application/json")]
     public abstract class BaseApiController : ControllerBase
     {
         private ISender? _mediator;

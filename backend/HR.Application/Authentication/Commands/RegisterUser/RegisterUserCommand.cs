@@ -9,10 +9,10 @@ public record RegisterUserCommand(
     string Email,
     string Password,
     UserRole Role,
-    string FirstName = "",
-    string LastName = "",
-    Department? Department = null,
-    string JobTitle = "",
-    decimal Salary = 0,
-    DateTime? DateOfJoining = null
-) : IRequest<AuthResponseDto>;
+    string FirstName,
+    string LastName,
+    Department Department,
+    string? JobTitle,
+    decimal Salary,
+    DateTime DateOfJoining
+) : IRequest<RegisterUserResultDto>;

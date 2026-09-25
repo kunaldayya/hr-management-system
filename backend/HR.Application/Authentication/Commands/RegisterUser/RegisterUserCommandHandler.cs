@@ -1,14 +1,14 @@
+using HR.Application.Common.Configurations;
 using HR.Application.Common.Interfaces;
 using HR.Application.Common.Models;
 using HR.Domain.Entities;
 using HR.Domain.Interfaces;
-using HR.Application.Common.Configurations;
 using MediatR;
 using Microsoft.Extensions.Options;
 
 namespace HR.Application.Authentication.Commands.RegisterUser;
 
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, AuthResponseDto>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, RegisterUserResultDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -27,9 +27,11 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
         _jwtSettings = jwtSettings.Value;
     }
 
-    public async Task<AuthResponseDto> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<RegisterUserResultDto> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
-        var existingUser = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+
+        var existingUser = await _userRepository.GetByEmailAsync(normalizedEmail, cancellationToken);
         if (existingUser != null)
         {
             throw new InvalidOperationException($"User with email '{request.Email}' already exists.");
@@ -39,7 +41,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
 
         var user = new User(
             tenantId: request.TenantId,
-            email: request.Email,
+            email: normalizedEmail,
             passwordHash: passwordHash,
             role: request.Role,
             firstName: request.FirstName,
@@ -57,12 +59,16 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, A
         user.UpdateRefreshToken(refreshToken, refreshTokenExpiry);
         await _userRepository.AddAsync(user, cancellationToken);
 
-        return new AuthResponseDto(
+        var fullName = $"{user.FirstName} {user.LastName}".Trim();
+
+        return new RegisterUserResultDto(
+            user.Id,
+            user.Email,
+            fullName,
+            user.Role,
             accessToken,
             refreshToken,
-            refreshTokenExpiry,
-            user.Email,
-            user.Role
+            refreshTokenExpiry
         );
     }
 }

@@ -5,6 +5,7 @@ using HR.Application.Common.Models;
 using HR.Application.Features.Auth.Commands.Logout;
 using HR.Application.Features.Auth.Queries.GetCurrentUser;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -12,10 +13,9 @@ namespace HR.Api.Controllers;
 
 public class AuthController : BaseApiController
 {
-    private bool IsDevelopment =>
-        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Development";
 
     [HttpPost("register")]
+    [AllowAnonymous]
     public async Task<ApiResponse<AuthUserDto>> Register(
         [FromBody] RegisterUserCommand command,
         CancellationToken cancellationToken)
@@ -24,11 +24,19 @@ public class AuthController : BaseApiController
 
         SetTokenCookies(result.AccessToken, result.RefreshToken, result.RefreshTokenExpiryTime);
 
-        var userDto = new AuthUserDto(result.Email, result.Role, result.AccessToken);
+        // ✅ Pass all 4 arguments
+        var userDto = new AuthUserDto(
+            result.Id,
+            result.Email,
+            result.FullName,
+            result.Role
+        );
+
         return ApiResponse<AuthUserDto>.Success(userDto, "User registered successfully");
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
     public async Task<ApiResponse<AuthUserDto>> Login(
         [FromBody] LoginCommand command,
         CancellationToken cancellationToken)
@@ -37,9 +45,13 @@ public class AuthController : BaseApiController
 
         SetTokenCookies(result.AccessToken, result.RefreshToken, result.RefreshTokenExpiryTime);
 
-        // Return the access token in the body so the frontend can store it in localStorage
-        // This allows Authorization: Bearer <token> to work regardless of cookie support
-        var userDto = new AuthUserDto(result.Email, result.Role, result.AccessToken);
+        var userDto = new AuthUserDto(
+            result.Id,
+            result.Email,
+            result.FullName,
+            result.Role
+        );
+
         return ApiResponse<AuthUserDto>.Success(userDto, "User authenticated successfully");
     }
 
@@ -48,64 +60,61 @@ public class AuthController : BaseApiController
     public async Task<ApiResponse<CurreUserDto>> GetCurrentUser(CancellationToken cancellationToken)
     {
         var result = await Mediator.Send(new GetCurrentUserQuery(), cancellationToken);
-        return Response(result, "User session is valid");
+        return ApiResponse<CurreUserDto>.Success(result, "User session is valid");
     }
 
     [HttpPost("logout")]
     [AllowAnonymous]
     public async Task<ApiResponse<bool>> Logout(CancellationToken cancellationToken)
     {
-        // Always clear cookies regardless of whether user is authenticated
-        var deleteCookieOptions = new CookieOptions
-        {
-            HttpOnly = true,
-            Secure = !IsDevelopment,
-            SameSite = IsDevelopment ? SameSiteMode.Lax : SameSiteMode.None,
-            Path = "/"
-        };
-
-        HttpContext.Response.Cookies.Delete("accessToken", deleteCookieOptions);
-        HttpContext.Response.Cookies.Delete("refreshToken", deleteCookieOptions);
-
-        // Also attempt plain delete as fallback
-        HttpContext.Response.Cookies.Delete("accessToken");
-        HttpContext.Response.Cookies.Delete("refreshToken");
-
-        // Attempt to revoke refresh token in DB — never throws, logout always succeeds
         try
         {
             var userId = User.FindFirstValue(ClaimTypes.NameIdentifier)
                       ?? User.FindFirstValue("sub");
+            var refreshToken = Request.Cookies["refreshToken"];
 
-            if (!string.IsNullOrEmpty(userId))
+            if (!string.IsNullOrEmpty(userId) || !string.IsNullOrEmpty(refreshToken))
             {
-                await Mediator.Send(new LogoutCommand(userId), cancellationToken);
+                await Mediator.Send(new LogoutCommand(userId ?? string.Empty, refreshToken), cancellationToken);
             }
         }
         catch
         {
-            // Swallow — user is already logged out on the client side
+            // Client logout should still succeed if token revoke fails.
         }
+
+        var deleteOptions = new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.None,
+            Path = "/"
+        };
+
+        HttpContext.Response.Cookies.Delete("accessToken", deleteOptions);
+        HttpContext.Response.Cookies.Delete("refreshToken", deleteOptions);
 
         return ApiResponse<bool>.Success(true, "User logged out successfully");
     }
 
     private void SetTokenCookies(string accessToken, string refreshToken, DateTime refreshTokenExpiry)
     {
+        // Both cookies use Path="/" so they are sent on every request and
+        // can be reliably deleted on logout with matching options.
         var accessCookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !IsDevelopment,
-            SameSite = IsDevelopment ? SameSiteMode.Lax : SameSiteMode.None,
+            Secure = true,
+            SameSite = SameSiteMode.None,
             Path = "/",
-            Expires = DateTime.UtcNow.AddMinutes(60)
+            Expires = DateTime.UtcNow.AddMinutes(15)
         };
 
         var refreshCookieOptions = new CookieOptions
         {
             HttpOnly = true,
-            Secure = !IsDevelopment,
-            SameSite = IsDevelopment ? SameSiteMode.Lax : SameSiteMode.None,
+            Secure = true,
+            SameSite = SameSiteMode.None,
             Path = "/",
             Expires = refreshTokenExpiry
         };

@@ -49,7 +49,7 @@ namespace HR.Api.Controllers
 
         [HttpPut("{id}/approve")]
         [Authorize(Roles = "Admin,HR")]
-        public async Task<ApiResponse<bool>> ApproveLeave(string id, [FromBody] ApproveLeaveDto? request)
+        public async Task<ApiResponse<bool>> ApproveLeave(string id, [FromBody] ApproveLeaveDto? request = null)
         {
             var command = new ApproveLeaveCommand
             {

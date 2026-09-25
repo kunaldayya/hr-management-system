@@ -53,22 +53,12 @@ const withQueryKey = <T extends object, K>(query: T, queryKey: K): T & { queryKe
   return result;
 };
 
-export type postApiEmployeesUpsertResponse200TextPlain = {
+export type postApiEmployeesUpsertResponse200 = {
   data: EmployeeDtoApiResponse
   status: 200
 }
 
-export type postApiEmployeesUpsertResponse200ApplicationJson = {
-  data: EmployeeDtoApiResponse
-  status: 200
-}
-
-export type postApiEmployeesUpsertResponse200TextJson = {
-  data: EmployeeDtoApiResponse
-  status: 200
-}
-
-export type postApiEmployeesUpsertResponseSuccess = (postApiEmployeesUpsertResponse200TextPlain | postApiEmployeesUpsertResponse200ApplicationJson | postApiEmployeesUpsertResponse200TextJson) & {
+export type postApiEmployeesUpsertResponseSuccess = (postApiEmployeesUpsertResponse200) & {
   headers: Headers;
 };
 ;
@@ -156,22 +146,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getPostApiEmployeesUpsertMutationOptions(options), queryClient);
     }
-    export type getApiEmployeesIdResponse200TextPlain = {
+    export type getApiEmployeesIdResponse200 = {
   data: EmployeeDtoApiResponse
   status: 200
 }
 
-export type getApiEmployeesIdResponse200ApplicationJson = {
-  data: EmployeeDtoApiResponse
-  status: 200
-}
-
-export type getApiEmployeesIdResponse200TextJson = {
-  data: EmployeeDtoApiResponse
-  status: 200
-}
-
-export type getApiEmployeesIdResponseSuccess = (getApiEmployeesIdResponse200TextPlain | getApiEmployeesIdResponse200ApplicationJson | getApiEmployeesIdResponse200TextJson) & {
+export type getApiEmployeesIdResponseSuccess = (getApiEmployeesIdResponse200) & {
   headers: Headers;
 };
 ;
@@ -272,22 +252,12 @@ export function useGetApiEmployeesId<TData = Awaited<ReturnType<typeof getApiEmp
 
 
 
-export type deleteApiEmployeesIdResponse200TextPlain = {
+export type deleteApiEmployeesIdResponse200 = {
   data: BooleanApiResponse
   status: 200
 }
 
-export type deleteApiEmployeesIdResponse200ApplicationJson = {
-  data: BooleanApiResponse
-  status: 200
-}
-
-export type deleteApiEmployeesIdResponse200TextJson = {
-  data: BooleanApiResponse
-  status: 200
-}
-
-export type deleteApiEmployeesIdResponseSuccess = (deleteApiEmployeesIdResponse200TextPlain | deleteApiEmployeesIdResponse200ApplicationJson | deleteApiEmployeesIdResponse200TextJson) & {
+export type deleteApiEmployeesIdResponseSuccess = (deleteApiEmployeesIdResponse200) & {
   headers: Headers;
 };
 ;
@@ -361,22 +331,12 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDeleteApiEmployeesIdMutationOptions(options), queryClient);
     }
-    export type getApiEmployeesResponse200TextPlain = {
+    export type getApiEmployeesResponse200 = {
   data: EmployeeDtoPaginatedResultApiResponse
   status: 200
 }
 
-export type getApiEmployeesResponse200ApplicationJson = {
-  data: EmployeeDtoPaginatedResultApiResponse
-  status: 200
-}
-
-export type getApiEmployeesResponse200TextJson = {
-  data: EmployeeDtoPaginatedResultApiResponse
-  status: 200
-}
-
-export type getApiEmployeesResponseSuccess = (getApiEmployeesResponse200TextPlain | getApiEmployeesResponse200ApplicationJson | getApiEmployeesResponse200TextJson) & {
+export type getApiEmployeesResponseSuccess = (getApiEmployeesResponse200) & {
   headers: Headers;
 };
 ;

@@ -23,7 +23,6 @@ const PageFallback: React.FC = () => (
 
 export function AppRoutes() {
   const { isAdmin } = useAuth();
-  const defaultRedirectPath = isAdmin ? '/dashboard/employees' : '/dashboard/attendance';
 
   return (
     <Suspense fallback={<PageFallback />}>
@@ -43,8 +42,8 @@ export function AppRoutes() {
               </DashboardLayout>
             }
           >
-            {/* Default index route */}
-            <Route index element={<Navigate to={defaultRedirectPath} replace />} />
+            {/* Redirect /dashboard directly to /dashboard/overview */}
+            <Route index element={<Navigate to="overview" replace />} />
 
             {/* Overview / Dashboard Home */}
             <Route path="overview" element={<EmployeeDashboard />} />
@@ -57,15 +56,12 @@ export function AppRoutes() {
             <Route path="attendance" element={<AttendanceManagement isAdmin={isAdmin} />} />
             <Route path="leaves" element={<LeaveManagement isAdmin={isAdmin} />} />
             <Route path="payslips" element={<PayslipManagement isAdmin={isAdmin} />} />
-
-            {/* Fallback for invalid dashboard sub-routes */}
-            <Route path="*" element={<Navigate to={defaultRedirectPath} replace />} />
           </Route>
         </Route>
 
         {/* 3. Global catch-all routes */}
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/" element={<Navigate to="/dashboard/overview" replace />} />
+        <Route path="*" element={<Navigate to="/dashboard/overview" replace />} />
       </Routes>
     </Suspense>
   );

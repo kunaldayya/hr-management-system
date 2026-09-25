@@ -16,8 +16,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { data: meResponse, isLoading, isError } = useGetApiAuthMe({
     query: {
       retry: false,
-      staleTime: 1000 * 60 * 5, 
-      gcTime: 0,
+      staleTime: 1000 * 60 * 5,
     },
   });
 

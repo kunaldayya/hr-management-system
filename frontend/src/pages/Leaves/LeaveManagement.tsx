@@ -72,15 +72,12 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
     const updateItem = (item: any) =>
       item.id === targetId ? { ...item, status: newStatus } : item;
 
-    // Direct Array
     if (Array.isArray(oldData)) {
       return oldData.map(updateItem);
     }
-    // ApiResponse wrapper: { data: [...] }
     if (Array.isArray(oldData.data)) {
       return { ...oldData, data: oldData.data.map(updateItem) };
     }
-    // Axios wrapper: { data: { data: [...] } }
     if (Array.isArray(oldData.data?.data)) {
       return {
         ...oldData,
@@ -91,7 +88,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
     return oldData;
   };
 
-  // 2. Mutations with OPTIMISTIC UPDATES for instant UI changes
+  // 2. Mutations with OPTIMISTIC UPDATES
   const applyLeaveMutation = usePostApiLeaves({
     mutation: {
       onSuccess: () => {
@@ -103,28 +100,21 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
 
   const approveMutation = usePutApiLeavesIdApprove({
     mutation: {
-      // Runs IMMEDIATELY when approve button is clicked
       onMutate: async (variables) => {
-        // Cancel ongoing refetches so they don't overwrite our optimistic update
         await queryClient.cancelQueries({ queryKey: activeQueryKey });
-
-        // Snapshot previous state for rollback on error
         const previousLeaves = queryClient.getQueryData(activeQueryKey);
 
-        // Optimistically update status to 'Approved' in the cache right away
         queryClient.setQueryData(activeQueryKey, (oldData: any) =>
           updateStatusInCache(oldData, variables.id, 'Approved')
         );
 
         return { previousLeaves };
       },
-      // Rollback to previous state if backend returns an error
       onError: (_err, _variables, context) => {
         if (context?.previousLeaves) {
           queryClient.setQueryData(activeQueryKey, context.previousLeaves);
         }
       },
-      // Always sync with backend after mutation settles
       onSettled: () => {
         queryClient.invalidateQueries({ queryKey: activeQueryKey });
       },
@@ -133,13 +123,10 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
 
   const rejectMutation = usePutApiLeavesIdReject({
     mutation: {
-      // Runs IMMEDIATELY when reject button is clicked
       onMutate: async (variables) => {
         await queryClient.cancelQueries({ queryKey: activeQueryKey });
-
         const previousLeaves = queryClient.getQueryData(activeQueryKey);
 
-        // Optimistically update status to 'Rejected' in the cache right away
         queryClient.setQueryData(activeQueryKey, (oldData: any) =>
           updateStatusInCache(oldData, variables.id, 'Rejected')
         );
@@ -165,8 +152,8 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
     applyLeaveMutation.mutate({
       data: {
         leaveType,
-        startDate: new Date(startDate).toISOString(),
-        endDate: new Date(endDate).toISOString(),
+        startDate: new Date(`${startDate}T00:00:00`).toISOString(),
+        endDate: new Date(`${endDate}T00:00:00`).toISOString(),
         reason,
       },
     });
@@ -174,31 +161,42 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
 
   const handleApprove = (id: string) => {
     approveMutation.mutate({
-      id, // Path parameter for {id}
+      id,
       data: {
-        adminRemarks: 'Approved', // Body parameter matching ApproveLeaveDto
+        adminRemarks: 'Approved',
       },
     });
   };
 
   const handleReject = (id: string) => {
     rejectMutation.mutate({
-      id, // Path parameter for {id}
+      id,
       data: {
-        reason: 'Rejected', // Body parameter matching RejectLeaveDto
+        reason: 'Rejected',
       },
     });
   };
 
+  // Helper function to resolve enum status representation
+  const getStatusBadgeConfig = (status: any) => {
+    if (status === 'Approved' || status === 1 || status === '1') {
+      return { label: 'Approved', color: 'success' as const };
+    }
+    if (status === 'Rejected' || status === 2 || status === '2') {
+      return { label: 'Rejected', color: 'danger' as const };
+    }
+    return { label: 'Pending', color: 'warning' as const };
+  };
+
   return (
-    <div className="w-full flex flex-col gap-6 p-6">
+    <div className="w-full flex flex-col gap-4 sm:gap-6 p-4 sm:p-6">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
             Leave Management
           </h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">
             {isAdmin
               ? 'Review and process employee leave applications.'
               : 'Submit and manage your personal leave requests.'}
@@ -208,118 +206,171 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
         <Button
           appearance="primary"
           onClick={() => setIsModalOpen(true)}
-          className="!rounded-sm !bg-blue-600 hover:!bg-blue-700 shadow-sm"
+          className="w-full sm:w-auto !rounded-md !bg-blue-600 hover:!bg-blue-700 shadow-sm"
         >
           + Apply for Leave
         </Button>
       </header>
 
-      {/* Leave Requests Table */}
-      <main className="w-full bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
-        <div className="w-full overflow-x-auto">
-          <Table className="w-full text-left text-sm text-slate-600">
-            <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
-              <TableRow>
-                <TableHeaderCell>Employee</TableHeaderCell>
-                <TableHeaderCell>Type</TableHeaderCell>
-                <TableHeaderCell>Dates</TableHeaderCell>
-                <TableHeaderCell>Reason</TableHeaderCell>
-                <TableHeaderCell>Status</TableHeaderCell>
-                {isAdmin && <TableHeaderCell className="text-right">Actions</TableHeaderCell>}
-              </TableRow>
-            </TableHeader>
-            <TableBody className="divide-y divide-slate-100">
-              {activeQuery.isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-slate-500">
-                    <div className="inline-flex items-center gap-2 justify-center w-full">
-                      <Spinner size="small" />
-                      Loading leave requests...
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : leaves.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={isAdmin ? 6 : 5} className="py-12 text-center text-slate-500">
-                    No leave requests found.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                leaves.map((leave: any, index: number) => {
-                  const employeeName = leave.employeeName ?? leave.employeeId ?? 'My Request';
+      {/* Main Content Area */}
+      <main className="w-full">
+        {activeQuery.isLoading ? (
+          <div className="py-12 bg-white border border-slate-200 rounded-lg text-center text-slate-500 flex items-center gap-2 justify-center">
+            <Spinner size="small" />
+            <span>Loading leave requests...</span>
+          </div>
+        ) : leaves.length === 0 ? (
+          <div className="py-12 bg-white border border-slate-200 rounded-lg text-center text-slate-500">
+            No leave requests found.
+          </div>
+        ) : (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="w-full overflow-x-auto">
+                <Table className="w-full text-left text-sm text-slate-600">
+                  <TableHeader className="bg-slate-50 border-b border-slate-200 text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    <TableRow>
+                      <TableHeaderCell>Employee</TableHeaderCell>
+                      <TableHeaderCell>Type</TableHeaderCell>
+                      <TableHeaderCell>Dates</TableHeaderCell>
+                      <TableHeaderCell>Reason</TableHeaderCell>
+                      <TableHeaderCell>Status</TableHeaderCell>
+                      {isAdmin && <TableHeaderCell className="text-right">Actions</TableHeaderCell>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody className="divide-y divide-slate-100">
+                    {leaves.map((leave: any, index: number) => {
+                      const employeeName = leave.employeeName ?? leave.employeeId ?? 'My Request';
+                      const statusConfig = getStatusBadgeConfig(leave.status);
+                      const isPending = leave.status === 'Pending' || leave.status === 0 || leave.status === '0';
 
-                  return (
-                    <TableRow key={leave.id ?? index} className="hover:bg-slate-50/80 transition-colors">
-                      <TableCell className="font-medium text-slate-900 whitespace-nowrap">
-                        {employeeName}
-                      </TableCell>
-                      <TableCell className="text-slate-600">{leave.leaveType}</TableCell>
-                      <TableCell className="text-slate-600 whitespace-nowrap">
+                      return (
+                        <TableRow key={leave.id ?? index} className="hover:bg-slate-50/80 transition-colors">
+                          <TableCell className="font-medium text-slate-900 whitespace-nowrap">
+                            {employeeName}
+                          </TableCell>
+                          <TableCell className="text-slate-600">{leave.leaveType}</TableCell>
+                          <TableCell className="text-slate-600 whitespace-nowrap">
+                            {leave.startDate ? new Date(leave.startDate).toLocaleDateString() : ''} –{' '}
+                            {leave.endDate ? new Date(leave.endDate).toLocaleDateString() : ''}
+                          </TableCell>
+                          <TableCell className="text-slate-600 max-w-xs truncate">{leave.reason}</TableCell>
+                          <TableCell className="whitespace-nowrap">
+                            <Badge appearance="tint" color={statusConfig.color}>
+                              {statusConfig.label}
+                            </Badge>
+                          </TableCell>
+                          {isAdmin && (
+                            <TableCell className="text-right whitespace-nowrap">
+                              {isPending ? (
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    size="small"
+                                    appearance="primary"
+                                    onClick={() => handleApprove(leave.id)}
+                                    disabled={approveMutation.isPending}
+                                    className="!bg-emerald-600 hover:!bg-emerald-700 text-white !rounded-sm"
+                                  >
+                                    {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                                  </Button>
+                                  <Button
+                                    size="small"
+                                    appearance="outline"
+                                    onClick={() => handleReject(leave.id)}
+                                    disabled={rejectMutation.isPending}
+                                    className="border-red-200 text-red-600 hover:bg-red-50 !rounded-sm"
+                                  >
+                                    {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
+                                  </Button>
+                                </div>
+                              ) : (
+                                <span className="text-xs text-slate-400 italic">No actions</span>
+                              )}
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="grid grid-cols-1 gap-3 md:hidden">
+              {leaves.map((leave: any, index: number) => {
+                const employeeName = leave.employeeName ?? leave.employeeId ?? 'My Request';
+                const statusConfig = getStatusBadgeConfig(leave.status);
+                const isPending = leave.status === 'Pending' || leave.status === 0 || leave.status === '0';
+
+                return (
+                  <div
+                    key={leave.id ?? index}
+                    className="bg-white border border-slate-200 rounded-lg p-4 shadow-sm flex flex-col gap-3"
+                  >
+                    <div className="flex justify-between items-start border-b border-slate-100 pb-2">
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-base">{employeeName}</h3>
+                        <p className="text-xs text-slate-500 font-medium">Type: {leave.leaveType}</p>
+                      </div>
+                      <Badge appearance="tint" color={statusConfig.color}>
+                        {statusConfig.label}
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-col gap-1 text-xs text-slate-600">
+                      <div>
+                        <span className="font-semibold text-slate-500">Dates: </span>
                         {leave.startDate ? new Date(leave.startDate).toLocaleDateString() : ''} –{' '}
                         {leave.endDate ? new Date(leave.endDate).toLocaleDateString() : ''}
-                      </TableCell>
-                      <TableCell className="text-slate-600 max-w-xs truncate">{leave.reason}</TableCell>
-                      <TableCell className="whitespace-nowrap">
-                        <Badge
-                          appearance="tint"
-                          color={
-                            leave.status === 'Approved'
-                              ? 'success'
-                              : leave.status === 'Rejected'
-                              ? 'danger'
-                              : 'warning'
-                          }
+                      </div>
+                      <div>
+                        <span className="font-semibold text-slate-500">Reason: </span>
+                        <span className="text-slate-700">{leave.reason}</span>
+                      </div>
+                    </div>
+
+                    {isAdmin && isPending && (
+                      <div className="flex gap-2 pt-2 border-t border-slate-100 mt-1">
+                        <Button
+                          size="small"
+                          appearance="primary"
+                          onClick={() => handleApprove(leave.id)}
+                          disabled={approveMutation.isPending}
+                          className="flex-1 !bg-emerald-600 hover:!bg-emerald-700 text-white !rounded-md"
                         >
-                          {leave.status}
-                        </Badge>
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right whitespace-nowrap">
-                          {leave.status === 'Pending' ? (
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="small"
-                                appearance="primary"
-                                onClick={() => handleApprove(leave.id)}
-                                disabled={approveMutation.isPending}
-                                className="!bg-emerald-600 hover:!bg-emerald-700 text-white !rounded-sm"
-                              >
-                                {approveMutation.isPending ? 'Approving...' : 'Approve'}
-                              </Button>
-                              <Button
-                                size="small"
-                                appearance="outline"
-                                onClick={() => handleReject(leave.id)}
-                                disabled={rejectMutation.isPending}
-                                className="border-red-200 text-red-600 hover:bg-red-50 !rounded-sm"
-                              >
-                                {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
-                              </Button>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-slate-400 italic">No actions</span>
-                          )}
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                          {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                        </Button>
+                        <Button
+                          size="small"
+                          appearance="outline"
+                          onClick={() => handleReject(leave.id)}
+                          disabled={rejectMutation.isPending}
+                          className="flex-1 border-red-200 text-red-600 hover:bg-red-50 !rounded-md"
+                        >
+                          {rejectMutation.isPending ? 'Rejecting...' : 'Reject'}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
       </main>
 
-      {/* Leave Application Dialog Modal */}
+      {/* Apply Leave Modal */}
       <Dialog open={isModalOpen} onOpenChange={(_, data) => !data.open && setIsModalOpen(false)}>
-        <DialogSurface className="!rounded-md !p-6 max-w-lg w-full bg-white border border-slate-200 shadow-xl">
+        <DialogSurface className="!rounded-lg !p-4 sm:!p-6 max-w-lg w-[calc(100vw-2rem)] sm:w-full bg-white border border-slate-200 shadow-xl max-h-[90vh] overflow-y-auto">
           <form onSubmit={handleApplyLeave}>
             <DialogBody>
               <DialogTitle className="text-slate-900 font-semibold text-lg border-b border-slate-200 pb-3 mb-4">
                 Apply for Leave
               </DialogTitle>
 
-              <DialogContent className="flex flex-col gap-4 py-2">
+              <DialogContent className="flex flex-col gap-4 py-1">
                 <div className="flex flex-col gap-1.5">
                   <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                     Leave Type
@@ -327,7 +378,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                   <select
                     value={leaveType}
                     onChange={(e) => setLeaveType(e.target.value as LeaveType)}
-                    className="h-8 px-3 rounded-sm border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600"
+                    className="h-10 px-3 rounded-md border border-slate-300 text-sm bg-white text-slate-800 focus:outline-none focus:border-blue-600 w-full"
                   >
                     <option value="Annual">Annual</option>
                     <option value="Sick">Sick</option>
@@ -336,7 +387,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                   </select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="flex flex-col gap-1.5">
                     <Label required className="text-xs font-semibold uppercase tracking-wider text-slate-600">
                       Start Date
@@ -346,7 +397,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                       value={startDate}
                       onChange={(_, d) => setStartDate(d.value)}
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   </div>
 
@@ -359,7 +410,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                       value={endDate}
                       onChange={(_, d) => setEndDate(d.value)}
                       required
-                      className="!rounded-sm"
+                      className="!rounded-md"
                     />
                   </div>
                 </div>
@@ -373,17 +424,17 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                     onChange={(_, d) => setReason(d.value)}
                     placeholder="Enter reason for leave"
                     required
-                    className="!rounded-sm"
+                    className="!rounded-md"
                   />
                 </div>
               </DialogContent>
 
-              <DialogActions className="pt-4 mt-4 border-t border-slate-200">
+              <DialogActions className="pt-4 mt-4 border-t border-slate-200 flex flex-row justify-end gap-2">
                 <Button
                   appearance="secondary"
                   onClick={() => setIsModalOpen(false)}
                   disabled={applyLeaveMutation.isPending}
-                  className="!rounded-sm"
+                  className="!rounded-md"
                 >
                   Cancel
                 </Button>
@@ -391,7 +442,7 @@ export function LeaveManagement({ isAdmin = false }: LeaveManagementProps) {
                   appearance="primary"
                   type="submit"
                   disabled={applyLeaveMutation.isPending}
-                  className="!rounded-sm !bg-blue-600 hover:!bg-blue-700"
+                  className="!rounded-md !bg-blue-600 hover:!bg-blue-700"
                 >
                   {applyLeaveMutation.isPending ? 'Submitting…' : 'Submit Request'}
                 </Button>
